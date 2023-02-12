@@ -1,18 +1,48 @@
 {
-    "name": "bottledcode/swytch-framework",
-    "description": "A high performance framework for microservices",
-    "type": "library",
-    "license": "MIT",
-    "autoload": {
-        "psr-4": {
-            "Bottledcode\\SwytchFramework\\": "src/"
-        }
-    },
-    "authors": [
-        {
-            "name": "Robert Landers",
-            "email": "landers.robert@gmail.com"
-        }
-    ],
-    "require": {}
+  "name": "bottledcode/swytch-framework",
+  "description": "A high performance framework for microservices",
+  "type": "library",
+  "license": "MIT",
+  "autoload": {
+    "psr-4": {
+      "Bottledcode\\SwytchFramework\\": "src/"
+    }
+  },
+  "authors": [
+    {
+      "name": "Robert Landers",
+      "email": "landers.robert@gmail.com"
+    }
+  ],
+  "require": {
+    "php": ">=8.2",
+    "gettext/gettext": "^5.6",
+    "gettext/translator": "^1.1",
+    "psr/container": "2.0.2",
+    "ext-intl": "*",
+    "olvlvl/composer-attribute-collector": "^1.1"
+  },
+  "require-dev": {
+    "roave/security-advisories": "dev-latest",
+    "phpstan/phpstan": "^1.9"
+  },
+  "replace": {
+    "symfony/polyfill-php80": "*",
+    "symfony/polyfill-ctype": "*",
+    "symfony/polyfill-intl-grapheme": "*",
+    "symfony/polyfill-intl-normalizer": "*",
+    "symfony/polyfill-mbstring": "*"
+  },
+  "repositories": [
+    {
+      "type": "vcs",
+      "branch": "master",
+      "url": "git@github.com:bottledcode/php-rql.git"
+    }
+  ],
+  "config": {
+    "allow-plugins": {
+      "olvlvl/composer-attribute-collector": true
+    }
+  }
 }
