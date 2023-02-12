@@ -1,0 +1,18 @@
+{
+    "name": "bottledcode/swytch-framework",
+    "description": "A high performance framework for microservices",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Bottledcode\\SwytchFramework\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Robert Landers",
+            "email": "landers.robert@gmail.com"
+        }
+    ],
+    "require": {}
+}
