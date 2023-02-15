@@ -20,11 +20,14 @@
     "gettext/translator": "^1.1",
     "psr/container": "2.0.2",
     "ext-intl": "*",
-    "olvlvl/composer-attribute-collector": "^1.1"
+    "olvlvl/composer-attribute-collector": "^1.1",
+    "masterminds/html5": "^2.7",
+    "ext-dom": "*"
   },
   "require-dev": {
     "roave/security-advisories": "dev-latest",
-    "phpstan/phpstan": "^1.9"
+    "phpstan/phpstan": "^1.9",
+    "pestphp/pest": "^1.22"
   },
   "replace": {
     "symfony/polyfill-php80": "*",
@@ -42,7 +45,8 @@
   ],
   "config": {
     "allow-plugins": {
-      "olvlvl/composer-attribute-collector": true
+      "olvlvl/composer-attribute-collector": true,
+      "pestphp/pest-plugin": true
     }
   }
 }
