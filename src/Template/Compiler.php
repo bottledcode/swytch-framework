@@ -116,7 +116,6 @@ final class Compiler
 			if (empty($fragment)) {
 				return [];
 			}
-			$fragment = substr($fragment, 0, strlen($fragment) - strlen('HTML;'));
 			$fragments[] = $fragment;
 		}
 

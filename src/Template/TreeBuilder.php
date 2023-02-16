@@ -6,6 +6,9 @@ use Masterminds\HTML5\Parser\DOMTreeBuilder;
 
 class TreeBuilder extends DOMTreeBuilder
 {
+	protected \DOMElement|\DOMDocumentFragment $closed;
+	protected bool $actuallyClosed = false;
+
 	public function __construct(bool $isFragment, array $options, private array $components, private Compiler $compiler)
 	{
 		parent::__construct($isFragment, $options);
@@ -13,6 +16,7 @@ class TreeBuilder extends DOMTreeBuilder
 
 	public function startTag($name, $attributes = array(), $selfClosing = false)
 	{
+		$this->actuallyClosed = false;
 		$mode = parent::startTag($name, $attributes, $selfClosing);
 		if (array_key_exists($name, $this->components)) {
 			// we need a rendered component here
@@ -24,8 +28,19 @@ class TreeBuilder extends DOMTreeBuilder
 
 			$node = $this->doc->createTextNode($content);
 
-			$this->current->appendChild($node);
+			if($selfClosing && $this->actuallyClosed) {
+				$this->closed->appendChild($node);
+			} else {
+				$this->current->appendChild($node);
+			}
 		}
 		return $mode;
+	}
+
+	protected function autoclose($tagName)
+	{
+		$this->closed = $this->current;
+		$this->actuallyClosed = true;
+		return parent::autoclose($tagName);
 	}
 }

@@ -10,7 +10,7 @@ class Nested
 		return <<<HTML
 <div>
 This is a title:
-<title/>
+<title></title>
 </div>
 HTML;
 	}

@@ -28,14 +28,14 @@ expect()->extend('toBeOne', function () {
 	return $this->toBe(1);
 });
 
-expect()->extend('toOutput', function ($expected) {
-	if (file_exists($expected)) {
-		$expected = file_get_contents($expected);
+expect()->extend('toOutput', function ($expectedFile) {
+	if (file_exists($expectedFile)) {
+		$expected = file_get_contents($expectedFile);
 		$this->toBe($expected);
 		return;
 	}
 
-	file_put_contents($expected, $this->value);
+	file_put_contents($expectedFile, $this->value);
 });
 
 /*
