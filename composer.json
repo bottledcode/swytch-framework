@@ -22,7 +22,8 @@
     "ext-intl": "*",
     "olvlvl/composer-attribute-collector": "^1.1",
     "masterminds/html5": "^2.7",
-    "ext-dom": "*"
+    "ext-dom": "*",
+    "ext-mbstring": "*"
   },
   "require-dev": {
     "roave/security-advisories": "dev-latest",

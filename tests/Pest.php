@@ -25,17 +25,17 @@
 */
 
 expect()->extend('toBeOne', function () {
-    return $this->toBe(1);
+	return $this->toBe(1);
 });
 
-expect()->extend('toOutput', function($expected) {
-    if(file_exists($expected)) {
-        $expected = file_get_contents($expected);
-        $this->toBe($expected);
-        return;
-    }
+expect()->extend('toOutput', function ($expected) {
+	if (file_exists($expected)) {
+		$expected = file_get_contents($expected);
+		$this->toBe($expected);
+		return;
+	}
 
-    file_put_contents($expected, $this->value);
+	file_put_contents($expected, $this->value);
 });
 
 /*
@@ -51,5 +51,5 @@ expect()->extend('toOutput', function($expected) {
 
 function something()
 {
-    // ..
+	// ..
 }

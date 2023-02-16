@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"><head>
-    <title>test title</title>
+    <title><?= new Bottledcode\SwytchFramework\Template\CompiledComponent(array (
+), "Title") ?></title>
 </head>
 <body>
 <h1>Simple Template</h1>
