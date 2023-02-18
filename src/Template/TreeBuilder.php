@@ -48,7 +48,7 @@ class TreeBuilder extends DOMTreeBuilder
 				setcookie(
 					"csrf_token",
 					$token,
-					['samesite' => 'strict', 'httponly' => true, ...($_SERVER['HTTPS'] ? ['secure' => true] : []), 'path' => $formAddress]
+					['samesite' => 'strict', 'httponly' => true, ...(($_SERVER['HTTPS'] ?? false) ? ['secure' => true] : []), 'path' => $formAddress]
 				);
 				$csrfElement = $current->createElementNS('', 'input');
 				$csrfElement->setAttribute('type', 'hidden');
