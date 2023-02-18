@@ -35,7 +35,9 @@ class TreeBuilder extends DOMTreeBuilder
 				if(str_starts_with($key, 'onkey')) {
 					$current->setAttribute('hx-trigger', "$triggerType changed delay:500ms");
 				}
-				$current->setAttribute('id', uniqid(more_entropy: true));
+				// calculate a stable id for the element
+				$xpath = $current->getNodePath();
+				$current->setAttribute('id', $xpath);
 			}
 		}
 
