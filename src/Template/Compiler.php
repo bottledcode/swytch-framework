@@ -31,7 +31,7 @@ final class Compiler
 	public function registerComponent(string|TargetClass $component): void
 	{
 		if($component instanceof TargetClass) {
-			$this->components[$component->attribute->name] = $component->name;
+			$this->components[mb_strtolower($component->attribute->name)] = $component->name;
 			return;
 		}
 
