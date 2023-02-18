@@ -19,8 +19,18 @@ class Route
 		return self::$foundRoute;
 	}
 
-	public function render(string $render, string $path, string $method): string
+	public function render(string $render, string $path, string|null $method = null): string
 	{
+		// no point in rendering anything if we already found a route
+		if($this->foundRoute()) {
+			return '';
+		}
+
+		// if no method is specified, assume the route should handle all methods
+		if($method === null) {
+			$method = $_SERVER['REQUEST_METHOD'];
+		}
+
 		$method = Method::tryFrom(strtoupper($method)) ?? throw new \LogicException('Invalid method: ' . $method);
 		$actualMethod = Method::tryFrom($_SERVER['REQUEST_METHOD']);
 		if ($actualMethod !== $method) {
