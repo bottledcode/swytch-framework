@@ -69,6 +69,13 @@ class TreeBuilder extends DOMTreeBuilder
 				$stateElement->setAttribute('name', 'state');
 				$stateElement->setAttribute('value', $stateData['state']);
 				$current->appendChild($stateElement);
+
+				// inject the id that will be sent to the server
+				$idElement = $this->doc->createElement('input');
+				$idElement->setAttribute('type', 'hidden');
+				$idElement->setAttribute('name', 'hx-id');
+				$idElement->setAttribute('value', end(self::$componentStack)->id);
+				$current->appendChild($idElement);
 			}
 		}
 
@@ -85,7 +92,7 @@ class TreeBuilder extends DOMTreeBuilder
 
 			$component = new CompiledComponent($this->components[$name], $this->container, $this->compiler);
 
-			self::$componentStack[] = new RenderedComponent($component, $attributes);
+			self::$componentStack[] = new RenderedComponent($component, $attributes, $this->getNodeAddress());
 
 			if (!$skipHxProcessing) {
 				$current->setAttribute('id', $this->getNodeAddress());
