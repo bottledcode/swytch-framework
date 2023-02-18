@@ -2,7 +2,6 @@
 
 namespace Bottledcode\SwytchFramework\Template;
 
-use JetBrains\PhpStorm\ArrayShape;
 use Masterminds\HTML5\Parser\DOMTreeBuilder;
 use Psr\Container\ContainerInterface;
 
@@ -25,10 +24,6 @@ class TreeBuilder extends DOMTreeBuilder
 		parent::__construct($isFragment, $options);
 	}
 
-	private function getNodeAddress(): string {
-		return implode('-', array_map(static fn($node) => $node->compiledComponent->component, self::$componentStack));
-	}
-
 	public function startTag($name, $attributes = array(), $selfClosing = false)
 	{
 		$this->actuallyClosed = false;
@@ -48,16 +43,21 @@ class TreeBuilder extends DOMTreeBuilder
 				setcookie(
 					"csrf_token",
 					$token,
-					['samesite' => 'strict', 'httponly' => true, ...(($_SERVER['HTTPS'] ?? false) ? ['secure' => true] : []), 'path' => $formAddress]
+					[
+						'samesite' => 'strict',
+						'httponly' => true,
+						...(($_SERVER['HTTPS'] ?? false) ? ['secure' => true] : []),
+						'path' => $formAddress
+					]
 				);
-				$csrfElement = $this->doc->createElementNS('', 'input');
+				$csrfElement = $this->doc->createElement('input');
 				$csrfElement->setAttribute('type', 'hidden');
 				$csrfElement->setAttribute('name', 'csrf_token');
 				$csrfElement->setAttribute('value', $token);
 				$current->appendChild($csrfElement);
 
 				// inject the current state of the form and use csrf token to verify/validate
-				$stateElement = $this->doc->createElement( 'input');
+				$stateElement = $this->doc->createElement('input');
 				$stateElement->setAttribute('type', 'hidden');
 				$stateElement->setAttribute('name', 'state_hash');
 				$state = end(self::$componentStack);
@@ -65,7 +65,7 @@ class TreeBuilder extends DOMTreeBuilder
 				$state = hash_hmac('sha256', $state, $this->container->get('state_secret'));
 				$stateElement->setAttribute('value', $state);
 				$current->appendChild($stateElement);
-				$stateElement = $this->doc->createElementNS('', 'input');
+				$stateElement = $this->doc->createElement('input');
 				$stateElement->setAttribute('type', 'hidden');
 				$stateElement->setAttribute('name', 'state');
 				$stateElement->setAttribute('value', base64_encode($state));
@@ -101,6 +101,11 @@ class TreeBuilder extends DOMTreeBuilder
 			array_pop(self::$componentStack);
 		}
 		return $mode;
+	}
+
+	private function getNodeAddress(): string
+	{
+		return implode('-', array_map(static fn($node) => $node->compiledComponent->component, self::$componentStack));
 	}
 
 	protected function autoclose($tagName)
