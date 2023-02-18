@@ -25,14 +25,21 @@
 */
 
 $container = new class implements Psr\Container\ContainerInterface {
+	public array $values = [];
+
 	public function get(string $id)
 	{
-		return new $id();
+		return $this->values[$id] ?? new $id();
 	}
 
 	public function has(string $id): bool
 	{
 		return false;
+	}
+
+	public function set(string $id, $value)
+	{
+		$this->values[$id] = $value;
 	}
 };
 

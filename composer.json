@@ -24,7 +24,8 @@
     "masterminds/html5": "^2.7",
     "ext-dom": "*",
     "ext-mbstring": "*",
-    "laminas/laminas-escaper": "^2.12"
+    "laminas/laminas-escaper": "^2.12",
+    "withinboredom/building-blocks": "^0.2.4"
   },
   "require-dev": {
     "roave/security-advisories": "dev-latest",

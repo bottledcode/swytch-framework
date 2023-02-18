@@ -3,6 +3,8 @@
 namespace Bottledcode\SwytchFramework\Router\Attributes;
 
 use Attribute;
+use Psr\Container\ContainerInterface;
+use Withinboredom\BuildingBlocks\Result;
 
 #[Attribute(Attribute::TARGET_METHOD)]
 class Authorize
@@ -15,9 +17,8 @@ class Authorize
      * @param callable $success
      * @param array<string, mixed> $params
      */
-    public function __invoke(callable $success, array $params): Result
+    public function __invoke(callable $success, array $params, ContainerInterface $container): Result
     {
-        $container = getContainer();
         /**
          * @var User|null $user
          */

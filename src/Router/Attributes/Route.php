@@ -6,6 +6,8 @@ use Attribute;
 use Bottledcode\SwytchFramework\Router\Method;
 use Psr\Container\ContainerInterface;
 use ReflectionClass;
+use Withinboredom\BuildingBlocks\Result;
+use Withinboredom\BuildingBlocks\Router;
 
 #[Attribute(Attribute::TARGET_METHOD)]
 readonly class Route

@@ -58,6 +58,8 @@
       <path value="$PROJECT_DIR$/vendor/psr/log" />
       <path value="$PROJECT_DIR$/vendor/sebastian/environment" />
       <path value="$PROJECT_DIR$/vendor/laminas/laminas-escaper" />
+      <path value="$PROJECT_DIR$/vendor/withinboredom/response-code" />
+      <path value="$PROJECT_DIR$/vendor/withinboredom/building-blocks" />
     </include_path>
   </component>
   <component name="PhpInterpreters">
