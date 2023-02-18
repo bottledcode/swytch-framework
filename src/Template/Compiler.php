@@ -24,14 +24,14 @@ final class Compiler
 	}
 
 	/**
-	 * @param class-string|TargetClass $component
+	 * @param class-string|TargetClass<Component> $component
 	 * @return void
 	 * @throws \ReflectionException
 	 */
 	public function registerComponent(string|TargetClass $component): void
 	{
 		if($component instanceof TargetClass) {
-			$this->components[$component->name] = $component->attribute;
+			$this->components[$component->attribute->name] = $component->name;
 			return;
 		}
 
