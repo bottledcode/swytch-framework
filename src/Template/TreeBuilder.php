@@ -2,14 +2,14 @@
 
 namespace Bottledcode\SwytchFramework\Template;
 
-use Bottledcode\SwytchFramework\Template\Interfaces\HxInterface;
+use JetBrains\PhpStorm\ArrayShape;
 use Masterminds\HTML5\Parser\DOMTreeBuilder;
 use Psr\Container\ContainerInterface;
 
 class TreeBuilder extends DOMTreeBuilder
 {
 	/**
-	 * @var array<string> The stack of components that are currently being rendered.
+	 * @var array<RenderedComponent> The stack of components that are currently being rendered.
 	 */
 	protected static array $componentStack = [];
 	protected \DOMElement|\DOMDocumentFragment $closed;
@@ -25,6 +25,10 @@ class TreeBuilder extends DOMTreeBuilder
 		parent::__construct($isFragment, $options);
 	}
 
+	private function getNodeAddress(): string {
+		return implode('-', array_map(static fn($node) => $node->compiledComponent->component, self::$componentStack));
+	}
+
 	public function startTag($name, $attributes = array(), $selfClosing = false)
 	{
 		$this->actuallyClosed = false;
@@ -35,22 +39,59 @@ class TreeBuilder extends DOMTreeBuilder
 			// todo: make this better
 			$current = $this->current->lastChild;
 		}
+
+		if ($name === 'form') {
+			$formAddress = $attributes['hx-post'] ?? $attributes['hx-put'] ?? $attributes['hx-delete'] ?? $attributes['hx-patch'] ?? null;
+			if ($formAddress !== null) {
+				// inject csrf token
+				$token = base64_encode(random_bytes(32));
+				setcookie(
+					"csrf_token",
+					$token,
+					['samesite' => 'strict', 'httponly' => true, ...($_SERVER['HTTPS'] ? ['secure' => true] : []), 'path' => $formAddress]
+				);
+				$csrfElement = $current->createElementNS('', 'input');
+				$csrfElement->setAttribute('type', 'hidden');
+				$csrfElement->setAttribute('name', 'csrf_token');
+				$csrfElement->setAttribute('value', $token);
+				$current->appendChild($csrfElement);
+
+				// inject the current state of the form and use csrf token to verify/validate
+				$stateElement = $current->createElementNS('', 'input');
+				$stateElement->setAttribute('type', 'hidden');
+				$stateElement->setAttribute('name', 'state_hash');
+				$state = end(self::$componentStack);
+				$state = json_encode($state->attributes, JSON_THROW_ON_ERROR);
+				$state = hash_hmac('sha256', $state, $this->container->get('state_secret'));
+				$stateElement->setAttribute('value', $state);
+				$current->appendChild($stateElement);
+				$stateElement = $current->createElementNS('', 'input');
+				$stateElement->setAttribute('type', 'hidden');
+				$stateElement->setAttribute('name', 'state');
+				$stateElement->setAttribute('value', base64_encode($state));
+				$current->appendChild($stateElement);
+			}
+		}
+
 		if (array_key_exists($name, $this->components)) {
 			// we need to remove the attributes from the component
 			foreach ($attributes as $key => $value) {
 				$current->removeAttribute($key);
 			}
 
-			self::$componentStack[] = $name;
 			$skipHxProcessing = false;
 			if (method_exists($this->components[$name], 'skipHxProcessing')) {
 				$skipHxProcessing = ($this->components[$name])::skipHxProcessing();
 			}
-			if (!$skipHxProcessing) {
-				$current->setAttribute('id', $name . $current->getNodePath());
-			}
 
 			$component = new CompiledComponent($this->components[$name], $this->container, $this->compiler);
+
+			self::$componentStack[] = new RenderedComponent($component, $attributes);
+
+			if (!$skipHxProcessing) {
+				$current->setAttribute('id', $this->getNodeAddress());
+			}
+
 			$content = $component->compile($attributes);
 
 			if ($content->childElementCount > 0) {
