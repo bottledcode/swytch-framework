@@ -48,8 +48,6 @@ class TreeBuilder extends DOMTreeBuilder
 			}
 			if (!$skipHxProcessing) {
 				$current->setAttribute('id', $name . $current->getNodePath());
-				$current->setAttribute('hx-swap', 'innerHTML');
-				$current->setAttribute('hx-post', '/component/' . $name);
 			}
 
 			$component = new CompiledComponent($this->components[$name], $this->container, $this->compiler);
