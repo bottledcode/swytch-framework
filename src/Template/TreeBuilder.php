@@ -35,25 +35,6 @@ class TreeBuilder extends DOMTreeBuilder
 			// todo: make this better
 			$current = $this->current->lastChild;
 		}
-
-		foreach ($attributes as $key => $value) {
-			if (is_string($value) && str_starts_with($value, '{__TRIGGER__')) {
-				// we need to adjust the attributes
-				$current->removeAttribute($key);
-				$triggerValue = str_replace(['{__TRIGGER__ ', '}'], '', $value);
-				$triggerType = str_replace('on', '', $key);
-				if (str_starts_with($key, 'onkey')) {
-					$current->setAttribute('hx-trigger', "$triggerType changed delay:500ms");
-				} else {
-					$current->setAttribute('hx-put', '/clickish' );
-				}
-				// calculate a stable id for the element
-				$xpath = $current->getNodePath();
-				$component = end(self::$componentStack) ?: 'top';
-				$current->setAttribute('id', $component . $name . $xpath);
-			}
-		}
-
 		if (array_key_exists($name, $this->components)) {
 			// we need to remove the attributes from the component
 			foreach ($attributes as $key => $value) {
