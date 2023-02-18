@@ -1,6 +1,7 @@
 <?php
 
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
+use Bottledcode\SwytchFramework\Template\Traits\FancyClasses;
 
 #[Component('TodoItem')]
 class TodoItem {
