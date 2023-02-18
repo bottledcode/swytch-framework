@@ -6,6 +6,7 @@ use Bottledcode\SwytchFramework\Router\Attributes\Route;
 use Bottledcode\SwytchFramework\Router\Exceptions\InvalidRequest;
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
 use Bottledcode\SwytchFramework\Template\Compiler;
+use Bottledcode\SwytchFramework\Template\StateSync;
 use olvlvl\ComposerAttributeCollector\Attributes;
 use olvlvl\ComposerAttributeCollector\TargetClass;
 use Psr\Container\ContainerInterface;
@@ -87,15 +88,10 @@ class MagicRouter
 					if (empty($state_signature) && !empty($state)) {
 						throw new InvalidRequest('Invalid state');
 					}
-					if(!empty($state)) {
-						$state = base64_decode($state);
-						if (!hash_equals(
-							hash_hmac('sha256', $state, $this->container->get('state_secret')),
-							$state_signature
-						)) {
+					if (!empty($state)) {
+						if (!StateSync::verifyState($this->container->get('state_secret'), $state, $state_signature)) {
 							throw new InvalidRequest('Invalid state');
 						}
-
 						unset($payload['state_hash']);
 						unset($payload['state']);
 					}

@@ -57,18 +57,17 @@ class TreeBuilder extends DOMTreeBuilder
 				$current->appendChild($csrfElement);
 
 				// inject the current state of the form and use csrf token to verify/validate
+				$stateData = StateSync::serializeState($this->container->get('state_secret'), end(self::$componentStack)->attributes);
+
 				$stateElement = $this->doc->createElement('input');
 				$stateElement->setAttribute('type', 'hidden');
 				$stateElement->setAttribute('name', 'state_hash');
-				$state = end(self::$componentStack);
-				$state = json_encode($state->attributes, JSON_THROW_ON_ERROR);
-				$state = hash_hmac('sha256', $state, $this->container->get('state_secret'));
-				$stateElement->setAttribute('value', $state);
+				$stateElement->setAttribute('value', $stateData['hash']);
 				$current->appendChild($stateElement);
 				$stateElement = $this->doc->createElement('input');
 				$stateElement->setAttribute('type', 'hidden');
 				$stateElement->setAttribute('name', 'state');
-				$stateElement->setAttribute('value', base64_encode($state));
+				$stateElement->setAttribute('value', $stateData['state']);
 				$current->appendChild($stateElement);
 			}
 		}

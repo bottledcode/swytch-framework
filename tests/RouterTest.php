@@ -5,6 +5,7 @@ use Bottledcode\SwytchFramework\Template\CompiledComponent;
 use Bottledcode\SwytchFramework\Template\Compiler;
 use Bottledcode\SwytchFramework\Template\Functional\DefaultRoute;
 use Bottledcode\SwytchFramework\Template\Functional\Route;
+use Bottledcode\SwytchFramework\Template\StateSync;
 
 it('can be used to route to other components based on request', function () {
 	global $container;
@@ -78,4 +79,10 @@ it('can render an htmx trigger', function () {
 	$app = $compiler->compileComponent(RouterAppIndex::class);
 	expect($app)->toBeInstanceOf(CompiledComponent::class);
 	expect($app->renderToString())->toOutput(__DIR__.'/RouterApp/expected-output-4.html');
+});
+
+it('can serialize and validate state', function() {
+	$state = ['foo' => 'bar'];
+	$serialized = StateSync::serializeState('secret', $state);
+	expect($deserialized = StateSync::verifyState('secret', base64_encode(json_encode($state)), $serialized['hash']))->toBeTrue();
 });
