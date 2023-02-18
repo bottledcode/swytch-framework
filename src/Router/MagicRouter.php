@@ -119,7 +119,7 @@ class MagicRouter
 				foreach ($componentMethodParameters as $parameter) {
 					$parameterName = $parameter->getName();
 					if ($parameterName === 'state') {
-						$arguments[] = $state;
+						$arguments['state'] = $state;
 					} else {
 						if ($parameter->getType() instanceof \ReflectionNamedType && $parameter->getType()->getName(
 							) === 'string') {
