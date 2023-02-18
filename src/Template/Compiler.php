@@ -6,7 +6,7 @@ use Bottledcode\SwytchFramework\Template\Attributes\Component;
 use Laminas\Escaper\Escaper;
 use Masterminds\HTML5;
 use Masterminds\HTML5\Exception;
-use olvlvl\ComposerAttributeCollector\Attributes;
+use olvlvl\ComposerAttributeCollector\TargetClass;
 use Psr\Container\ContainerInterface;
 
 final class Compiler
@@ -24,24 +24,20 @@ final class Compiler
 	}
 
 	/**
-	 * @param class-string $component
+	 * @param class-string|TargetClass $component
 	 * @return void
 	 * @throws \ReflectionException
 	 */
-	public function registerComponent(string $component): void
+	public function registerComponent(string|TargetClass $component): void
 	{
-		try {
-			/**
-			 * @var array<\ReflectionAttribute<Component>> $attributes
-			 */
-			$attributes = Attributes::forClass($component)->classAttributes;
-		} catch (\LogicException) {
-			$attributes = [];
+		if($component instanceof TargetClass) {
+			$this->components[$component->name] = $component->attribute;
+			return;
 		}
-		if (empty($attributes)) {
-			$class = new \ReflectionClass($component);
-			$attributes = $class->getAttributes(Component::class);
-		}
+
+		$class = new \ReflectionClass($component);
+		$attributes = $class->getAttributes(Component::class);
+
 
 		foreach ($attributes as $attribute) {
 			if ($attribute->getName() === Component::class) {
@@ -63,7 +59,7 @@ final class Compiler
 	public function compile(string $html): \DOMDocument|\DOMDocumentFragment
 	{
 		$isFragment = !str_contains($html, '<html>');
-		if(str_contains($html, '</body>')) {
+		if (str_contains($html, '</body>')) {
 			$html = str_replace('</body>', '<script src="https://unpkg.com/htmx.org@1.8.5"></script></body>', $html);
 		}
 		$events = new TreeBuilder(
