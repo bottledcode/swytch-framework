@@ -29,6 +29,10 @@ class MagicRouter
 	public function go(): string|null
 	{
 		$currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+		$compiler = $this->container->get(Compiler::class);
+		array_map(static fn(TargetClass $class) => $compiler->registerComponent($class),
+			Attributes::findTargetClasses(Component::class));
+
 		if (str_starts_with($currentPath, '/api')) {
 			// handle api routes
 			$apiRoutes = Attributes::findTargetMethods(Route::class);
@@ -140,9 +144,6 @@ class MagicRouter
 			}
 		} else {
 			// handle web routes
-			$compiler = $this->container->get(Compiler::class);
-			array_map(static fn(TargetClass $class) => $compiler->registerComponent($class),
-				Attributes::findTargetClasses(Component::class));
 			return $compiler->compileComponent($this->appRoot)->renderToString();
 		}
 
