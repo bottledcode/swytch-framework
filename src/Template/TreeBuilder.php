@@ -27,7 +27,7 @@ class TreeBuilder extends DOMTreeBuilder
 		}
 
 		foreach($attributes as $key => $value) {
-			if(str_starts_with($value, '{__TRIGGER__')) {
+			if(is_string($value) && str_starts_with($value, '{__TRIGGER__')) {
 				// we need to adjust the attributes
 				$current->removeAttribute($key);
 				$triggerValue = str_replace(['{__TRIGGER__ ', '}'], '', $value);
