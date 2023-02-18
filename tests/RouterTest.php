@@ -12,9 +12,10 @@ it('can be used to route to other components based on request', function () {
 	require_once __DIR__ .'/RouterApp/Index.php';
 	$compiler->registerComponent(RouterAppIndex::class);
 	$compiler->registerComponent(Route::class);
+	$compiler->registerComponent(DefaultRoute::class);
 	$_SERVER['REQUEST_METHOD'] = Method::GET->value;
 	$_SERVER['REQUEST_URI'] = '/';
-	$container->set(Route::class, new Route($compiler));
+	$container->set(Route::class, new Route());
 
 	$app = $compiler->compileComponent(RouterAppIndex::class);
 	expect($app)->toBeInstanceOf(CompiledComponent::class);
@@ -29,9 +30,11 @@ it('can render variables', function () {
 	require_once __DIR__ .'/RouterApp/Index.php';
 	$compiler->registerComponent(RouterAppIndex::class);
 	$compiler->registerComponent(Route::class);
+	$compiler->registerComponent(DefaultRoute::class);
 	$_SERVER['REQUEST_METHOD'] = Method::GET->value;
 	$_SERVER['REQUEST_URI'] = '/test/123';
-	$container->set(Route::class, new Route($compiler));
+	$container->set(Route::class, new Route());
+	Route::reset();
 
 	$app = $compiler->compileComponent(RouterAppIndex::class);
 	expect($app)->toBeInstanceOf(CompiledComponent::class);
@@ -50,10 +53,29 @@ it('can render default route', function () {
 	$_SERVER['REQUEST_METHOD'] = Method::GET->value;
 	$_SERVER['REQUEST_URI'] = '/nowhere';
 	$container->set(Route::class, new Route());
+	Route::reset();
 
 	$app = $compiler->compileComponent(RouterAppIndex::class);
 	expect($app)->toBeInstanceOf(CompiledComponent::class);
 	expect($app->renderToString())->toOutput(__DIR__.'/RouterApp/expected-output-3.html');
 
 	$container->set(Route::class, null);
+});
+
+it('can render an htmx trigger', function () {
+	global $container;
+	$compiler = new Compiler(container: $container);
+	require_once __DIR__ .'/RouterApp/Index.php';
+	require_once __DIR__ .'/RouterApp/Test.php';
+	$compiler->registerComponent(RouterAppIndex::class);
+	$compiler->registerComponent(Route::class);
+	$compiler->registerComponent(DefaultRoute::class);
+	$compiler->registerComponent(Test::class);
+	$_SERVER['REQUEST_METHOD'] = Method::GET->value;
+	$_SERVER['REQUEST_URI'] = '/test/123';
+	Route::reset();
+
+	$app = $compiler->compileComponent(RouterAppIndex::class);
+	expect($app)->toBeInstanceOf(CompiledComponent::class);
+	expect($app->renderToString())->toOutput(__DIR__.'/RouterApp/expected-output-4.html');
 });

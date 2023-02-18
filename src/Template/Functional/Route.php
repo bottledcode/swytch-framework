@@ -19,6 +19,10 @@ class Route
 		return self::$foundRoute;
 	}
 
+	public static function reset(): void {
+		self::$foundRoute = false;
+	}
+
 	public function render(string $render, string $path, string|null $method = null): string
 	{
 		// no point in rendering anything if we already found a route

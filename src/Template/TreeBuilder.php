@@ -19,9 +19,27 @@ class TreeBuilder extends DOMTreeBuilder
 	{
 		$this->actuallyClosed = false;
 		$mode = parent::startTag($name, $attributes, $selfClosing);
-		if (array_key_exists($name, $this->components)) {
-			$current = ($selfClosing && $this->actuallyClosed) ? $this->closed : $this->current;
+		$current = ($selfClosing && $this->actuallyClosed) ? $this->closed : $this->current;
+		if($name === 'input') {
+			// get the last input, hopefully.
+			// todo: make this better
+			$current = $this->current->lastChild;
+		}
 
+		foreach($attributes as $key => $value) {
+			if(str_starts_with($value, '{__TRIGGER__')) {
+				// we need to adjust the attributes
+				$current->removeAttribute($key);
+				$triggerValue = str_replace(['{__TRIGGER__ ', '}'], '', $value);
+				$triggerType = str_replace('on', '', $key);
+				if(str_starts_with($key, 'onkey')) {
+					$current->setAttribute('hx-trigger', "$triggerType changed delay:500ms");
+				}
+				$current->setAttribute('id', uniqid(more_entropy: true));
+			}
+		}
+
+		if (array_key_exists($name, $this->components)) {
 			// we need to remove the attributes from the component
 			foreach($attributes as $key => $value) {
 				$current->removeAttribute($key);
