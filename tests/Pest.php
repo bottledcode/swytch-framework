@@ -24,6 +24,18 @@
 |
 */
 
+$container = new class implements Psr\Container\ContainerInterface {
+	public function get(string $id)
+	{
+		return new $id();
+	}
+
+	public function has(string $id): bool
+	{
+		return false;
+	}
+};
+
 expect()->extend('toBeOne', function () {
 	return $this->toBe(1);
 });

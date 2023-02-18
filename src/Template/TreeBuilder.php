@@ -3,13 +3,14 @@
 namespace Bottledcode\SwytchFramework\Template;
 
 use Masterminds\HTML5\Parser\DOMTreeBuilder;
+use Psr\Container\ContainerInterface;
 
 class TreeBuilder extends DOMTreeBuilder
 {
 	protected \DOMElement|\DOMDocumentFragment $closed;
 	protected bool $actuallyClosed = false;
 
-	public function __construct(bool $isFragment, array $options, private array $components, private Compiler $compiler)
+	public function __construct(bool $isFragment, array $options, private array $components, private Compiler $compiler, private ContainerInterface $container)
 	{
 		parent::__construct($isFragment, $options);
 	}
@@ -19,19 +20,24 @@ class TreeBuilder extends DOMTreeBuilder
 		$this->actuallyClosed = false;
 		$mode = parent::startTag($name, $attributes, $selfClosing);
 		if (array_key_exists($name, $this->components)) {
-			// we need a rendered component here
-			$map = $this->compiler->parseFragment($component = $this->components[$name]);
-			$map = var_export($map, true);
-			$c = CompiledComponent::class;
-			$component = json_encode($component);
-			$content = "<?= new $c($map, $component) ?>";
+			// we need to remove the attributes from the component
+			if($selfClosing && $this->actuallyClosed) {
+				foreach($attributes as $key => $value) {
+					$this->closed->removeAttribute($key);
+				}
+			} else {
+				foreach($attributes as $key => $value) {
+					$this->current->removeAttribute($key);
+				}
+			}
 
-			$node = $this->doc->createTextNode($content);
+			$component = new CompiledComponent($this->components[$name], $this->container, $this->compiler);
+			$content = $component->compile($attributes);
 
 			if($selfClosing && $this->actuallyClosed) {
-				$this->closed->appendChild($node);
+				$this->closed->appendChild($content);
 			} else {
-				$this->current->appendChild($node);
+				$this->current->appendChild($content);
 			}
 		}
 		return $mode;

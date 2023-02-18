@@ -23,7 +23,8 @@
     "olvlvl/composer-attribute-collector": "^1.1",
     "masterminds/html5": "^2.7",
     "ext-dom": "*",
-    "ext-mbstring": "*"
+    "ext-mbstring": "*",
+    "laminas/laminas-escaper": "^2.12"
   },
   "require-dev": {
     "roave/security-advisories": "dev-latest",

@@ -3,9 +3,11 @@
 namespace Bottledcode\SwytchFramework\Template;
 
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
+use Laminas\Escaper\Escaper;
 use Masterminds\HTML5;
 use Masterminds\HTML5\Exception;
 use olvlvl\ComposerAttributeCollector\Attributes;
+use Psr\Container\ContainerInterface;
 
 final class Compiler
 {
@@ -15,50 +17,10 @@ final class Compiler
 	 */
 	private array $components = [];
 
-	public function __construct(public readonly string $template)
+	private \DOMDocument|null $doc = null;
+
+	public function __construct(private readonly ContainerInterface|null $container = null)
 	{
-	}
-
-	public function compile(): string
-	{
-		$doc = $this->parse();
-		return $this->renderCompiledHtml($doc);
-	}
-
-	/**
-	 * @throws Exception
-	 */
-	private function parse(): \DOMDocument
-	{
-		$events = new TreeBuilder(false, self::OPTIONS, $this->components, $this);
-		$scanner = new HTML5\Parser\Scanner(
-			file_get_contents($this->template) ?: throw new \LogicException('Unable to open template'), 'UTF-8'
-		);
-		$parser = new HTML5\Parser\Tokenizer($scanner, $events, HTML5\Parser\Tokenizer::CONFORMANT_HTML);
-
-		$parser->parse();
-
-		return $events->document();
-	}
-
-	private function renderCompiledHtml(\DOMDocument|\DOMDocumentFragment $dom): string
-	{
-		$file = fopen('php://temp', 'wb');
-		if ($file === false) {
-			return '';
-		}
-
-		$rules = new Output($file, self::OPTIONS);
-		$traverser = new HTML5\Serializer\Traverser($dom, $file, $rules, self::OPTIONS);
-
-		$traverser->walk();
-
-		$rules->unsetTraverser();
-
-		$return = stream_get_contents($file, -1, 0);
-		fclose($file);
-
-		return $return ?: '';
 	}
 
 	/**
@@ -93,7 +55,33 @@ final class Compiler
 		}
 	}
 
-	public function parseFragment(object|string $fragmentClass): array
+	public function compileComponent(string $componentName): CompiledComponent
+	{
+		return new CompiledComponent($componentName, $this->container, $this);
+	}
+
+	public function compile(string $html): \DOMDocument|\DOMDocumentFragment
+	{
+		$isFragment = !str_contains($html, '<html>');
+		$events = new TreeBuilder(
+			$isFragment,
+			[...self::OPTIONS, 'target_document' => $this->doc],
+			$this->components,
+			$this,
+			$this->container
+		);
+		if ($this->doc === null) {
+			$this->doc = $events->document();
+		}
+		$scanner = new HTML5\Parser\Scanner($html, 'UTF-8');
+		$parser = new HTML5\Parser\Tokenizer($scanner, $events, HTML5\Parser\Tokenizer::CONFORMANT_HTML);
+
+		$parser->parse();
+
+		return $isFragment ? $events->fragment() : $events->document();
+	}
+
+	private function parseFragment(object|string $fragmentClass): array
 	{
 		$reflector = new \ReflectionClass($fragmentClass);
 		$file = $reflector->getFileName();
@@ -135,5 +123,30 @@ final class Compiler
 		}
 
 		return $compiledFragments;
+	}
+
+	/**
+	 * @throws Exception
+	 */
+
+	public function renderCompiledHtml(\DOMDocument|\DOMDocumentFragment $dom): string
+	{
+		$file = fopen('php://temp', 'wb');
+		if ($file === false) {
+			return '';
+		}
+
+		$rules = new Output($file, self::OPTIONS);
+		$rules->setEscaper($this->container->get(Escaper::class));
+		$traverser = new HTML5\Serializer\Traverser($dom, $file, $rules, self::OPTIONS);
+
+		$traverser->walk();
+
+		$rules->unsetTraverser();
+
+		$return = stream_get_contents($file, -1, 0);
+		fclose($file);
+
+		return $return ?: '';
 	}
 }
