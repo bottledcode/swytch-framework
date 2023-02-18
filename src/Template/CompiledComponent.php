@@ -2,6 +2,7 @@
 
 namespace Bottledcode\SwytchFramework\Template;
 
+use Bottledcode\SwytchFramework\Template\Interfaces\BeforeRenderInterface;
 use Psr\Container\ContainerInterface;
 
 readonly class CompiledComponent
@@ -22,8 +23,8 @@ readonly class CompiledComponent
 	{
 		// we are about to render
 		$component = $this->container->get($this->component);
-		if ($component instanceof ComponentInterface) {
-			$component->aboutToRender();
+		if ($component instanceof BeforeRenderInterface) {
+			$component->aboutToRender($attributes);
 		}
 
 		// todo: render components in attributes?

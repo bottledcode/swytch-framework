@@ -4,10 +4,10 @@ namespace Bottledcode\SwytchFramework\Template\Functional;
 
 use Bottledcode\SwytchFramework\Router\Method;
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
-use Bottledcode\SwytchFramework\Template\Compiler;
+use Bottledcode\SwytchFramework\Template\Interfaces\HxInterface;
 
 #[Component('Route')]
-class Route
+class Route implements HxInterface
 {
 	private static bool $foundRoute = false;
 
@@ -15,23 +15,25 @@ class Route
 	{
 	}
 
-	protected function foundRoute(): bool {
-		return self::$foundRoute;
+	public static function reset(): void
+	{
+		self::$foundRoute = false;
 	}
 
-	public static function reset(): void {
-		self::$foundRoute = false;
+	public static function skipHxProcessing(): bool
+	{
+		return true;
 	}
 
 	public function render(string $render, string $path, string|null $method = null): string
 	{
 		// no point in rendering anything if we already found a route
-		if($this->foundRoute()) {
+		if ($this->foundRoute()) {
 			return '';
 		}
 
 		// if no method is specified, assume the route should handle all methods
-		if($method === null) {
+		if ($method === null) {
 			$method = $_SERVER['REQUEST_METHOD'];
 		}
 
@@ -49,7 +51,7 @@ class Route
 		}
 
 		for ($i = 0; $i < $numParts; $i++) {
-			if (str_starts_with($parts[$i],':')) {
+			if (str_starts_with($parts[$i], ':')) {
 				$render = str_replace("{{$parts[$i]}}", $actualParts[$i], $render);
 			} else {
 				if ($parts[$i] !== $actualParts[$i]) {
@@ -61,5 +63,10 @@ class Route
 		self::$foundRoute = true;
 
 		return $render;
+	}
+
+	protected function foundRoute(): bool
+	{
+		return self::$foundRoute;
 	}
 }
