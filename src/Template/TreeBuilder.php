@@ -44,6 +44,8 @@ class TreeBuilder extends DOMTreeBuilder
 				$triggerType = str_replace('on', '', $key);
 				if (str_starts_with($key, 'onkey')) {
 					$current->setAttribute('hx-trigger', "$triggerType changed delay:500ms");
+				} else {
+					$current->setAttribute('hx-put', '/clickish' );
 				}
 				// calculate a stable id for the element
 				$xpath = $current->getNodePath();
