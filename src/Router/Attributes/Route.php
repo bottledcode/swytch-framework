@@ -9,7 +9,7 @@ use ReflectionClass;
 use Withinboredom\BuildingBlocks\Result;
 use Withinboredom\BuildingBlocks\Router;
 
-#[Attribute(Attribute::TARGET_METHOD)]
+#[Attribute(Attribute::TARGET_METHOD | Attribute::IS_REPEATABLE)]
 readonly class Route
 {
     public function __construct(public Method $method, public string $path)
