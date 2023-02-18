@@ -19,7 +19,7 @@ final class Compiler
 
 	private \DOMDocument|null $doc = null;
 
-	public function __construct(private readonly ContainerInterface|null $container = null)
+	public function __construct(private readonly ContainerInterface $container)
 	{
 	}
 
