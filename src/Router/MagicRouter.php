@@ -119,7 +119,7 @@ class MagicRouter
 				foreach ($componentMethodParameters as $parameter) {
 					$parameterName = $parameter->getName();
 					if ($parameterName === 'state') {
-						$arguments['state'] = $state;
+						$arguments['state'] = json_decode(base64_decode($state), true, flags: JSON_THROW_ON_ERROR);
 					} else {
 						if ($parameter->getType() instanceof \ReflectionNamedType && $parameter->getType()->getName(
 							) === 'string') {
