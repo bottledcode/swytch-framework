@@ -43,6 +43,7 @@ trait Callbacks
 			throw new \LogicException('Can not rerender without a compiler');
 		}
 
+		header('hx-retarget: #' . $target_id);
 		$dom = $this->compiler->compile("<{$attribute->name} id='{{$target_id}}' {$state}></{$attribute->name}>");
 		return $this->compiler->renderCompiledHtml($dom);
 	}
