@@ -11,6 +11,6 @@ trait FancyClasses
 	 */
 	private function classNames(array $classes): string
 	{
-		return implode(' ', $classes);
+		return implode(' ', array_keys(array_filter($classes)));
 	}
 }
