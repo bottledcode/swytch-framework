@@ -100,7 +100,7 @@ class TreeBuilder extends DOMTreeBuilder
 
 			$component = new CompiledComponent($this->components[$name], $this->container, $this->compiler);
 
-			$id = $attributes['id'] ?? md5(random_bytes(8) . time());
+			$id = $attributes['id'] ?? 'id'. substr(md5(random_bytes(8) . time()), 0, 6);
 
 			self::$componentStack[] = new RenderedComponent($component, $attributes, $id);
 
