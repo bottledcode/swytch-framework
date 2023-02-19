@@ -133,7 +133,7 @@ final class Compiler
 		$compiledFragments = [];
 
 		foreach ($fragments as $fragment) {
-			$events = new TreeBuilder(true, self::OPTIONS, $this->components, $this);
+			$events = new TreeBuilder(true, self::OPTIONS, $this->components, $this, );
 			$scanner = new HTML5\Parser\Scanner($fragment, 'UTF-8');
 			$parser = new HTML5\Parser\Tokenizer($scanner, $events, HTML5\Parser\Tokenizer::CONFORMANT_HTML);
 

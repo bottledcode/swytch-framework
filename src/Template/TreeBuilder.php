@@ -15,15 +15,17 @@ class TreeBuilder extends DOMTreeBuilder
 	protected \DOMElement|\DOMDocumentFragment $closed;
 	protected bool $actuallyClosed = false;
 
+	private readonly StateProviderInterface $stateProvider;
+
 	public function __construct(
 		bool $isFragment,
 		array $options,
 		private array $components,
 		private Compiler $compiler,
 		private ContainerInterface $container,
-		private readonly StateProviderInterface $stateProvider
 	) {
 		parent::__construct($isFragment, $options);
+		$this->stateProvider = $this->container->get(StateProviderInterface::class);
 	}
 
 	public function startTag($name, $attributes = array(), $selfClosing = false)
