@@ -116,7 +116,7 @@ class TreeBuilder extends DOMTreeBuilder
 			$usedAttributes = $component->getUsedAttributes();
 
 			// we need to remove the attributes from the component
-			foreach (array_diff_key($attributes, $usedAttributes) as $key => $value) {
+			foreach (array_intersect_key($attributes, $usedAttributes) as $key => $value) {
 				$current->removeAttribute($key);
 			}
 
