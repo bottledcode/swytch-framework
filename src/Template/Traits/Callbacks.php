@@ -12,7 +12,7 @@ trait Callbacks
 	private Serializer $serializer;
 	private Compiler $compiler;
 
-	private function rerender(array $withState = []): string
+	private function rerender(array $withState = [], string $target_id): string
 	{
 		$attributes = Attributes::forClass(static::class);
 
@@ -43,7 +43,7 @@ trait Callbacks
 			throw new \LogicException('Can not rerender without a compiler');
 		}
 
-		$dom = $this->compiler->compile("<{$attribute->name} {$state}></{$attribute->name}>");
+		$dom = $this->compiler->compile("<{$attribute->name} id='{{$target_id}}' {$state}></{$attribute->name}>");
 		return $this->compiler->renderCompiledHtml($dom);
 	}
 }

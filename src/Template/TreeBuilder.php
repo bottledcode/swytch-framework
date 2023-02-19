@@ -96,7 +96,7 @@ class TreeBuilder extends DOMTreeBuilder
 
 			self::$componentStack[] = new RenderedComponent($component, $attributes);
 
-			if (!$skipHxProcessing) {
+			if (!$skipHxProcessing && empty($attributes['id'])) {
 				$current->setAttribute('id', $this->getNodeAddress());
 			}
 
