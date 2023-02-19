@@ -98,11 +98,6 @@ class TreeBuilder extends DOMTreeBuilder
 		}
 
 		if (array_key_exists($name, $this->components)) {
-			// we need to remove the attributes from the component
-			foreach ($attributes as $key => $value) {
-				$current->removeAttribute($key);
-			}
-
 			$skipHxProcessing = false;
 			if (method_exists($this->components[$name], 'skipHxProcessing')) {
 				$skipHxProcessing = ($this->components[$name])::skipHxProcessing();
@@ -118,8 +113,13 @@ class TreeBuilder extends DOMTreeBuilder
 				$current->setAttribute('id', $id);
 			}
 			unset($attributes['id']);
+			$originalAttributes = $attributes;
 
 			$content = $component->compile($attributes);
+			// we need to remove the attributes from the component
+			foreach (array_diff_key($originalAttributes, $attributes) as $key => $value) {
+				$current->removeAttribute($key);
+			}
 
 			if ($content->childElementCount > 0) {
 				$current->appendChild($content);
