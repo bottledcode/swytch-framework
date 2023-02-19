@@ -115,7 +115,7 @@ class TreeBuilder extends DOMTreeBuilder
 
 	private function getNodeAddress(): string
 	{
-		return implode('-', array_map(static fn($node) => $node->compiledComponent->component, self::$componentStack));
+		return implode('-', array_map(static fn($node) => str_replace('\\', '_', $node->compiledComponent->component), self::$componentStack));
 	}
 
 	protected function autoclose($tagName)
