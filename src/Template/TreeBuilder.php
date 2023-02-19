@@ -99,6 +99,7 @@ class TreeBuilder extends DOMTreeBuilder
 			if (!$skipHxProcessing && empty($attributes['id'])) {
 				$current->setAttribute('id', $this->getNodeAddress());
 			}
+			unset($attributes['id']);
 
 			$content = $component->compile($attributes);
 
