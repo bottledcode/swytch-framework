@@ -12,7 +12,7 @@ trait Callbacks
 	private Serializer $serializer;
 	private Compiler $compiler;
 
-	private function rerender(array $withState = [], string $target_id): string
+	private function rerender(string $target_id, array $withState = []): string
 	{
 		$attributes = Attributes::forClass(static::class);
 
