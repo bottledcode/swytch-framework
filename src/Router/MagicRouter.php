@@ -70,15 +70,17 @@ class MagicRouter
 				if ($currentMethod !== Method::GET) {
 					// determine if the payload is json or form data
 					$contentType = $_SERVER['CONTENT_TYPE'] ?? '';
-					$payload = match ($contentType) {
-						'application/json' => json_decode(
+					$payload = null;
+					if($contentType === 'application/json') {
+						$payload = json_decode(
 							file_get_contents('php://input') ?: '',
 							true,
 							flags: JSON_THROW_ON_ERROR
-						),
-						'application/x-www-form-urlencoded' => $_REQUEST,
-						default => null
-					};
+						);
+					}
+					if($contentType === 'application/x-www-form-urlencoded') {
+						parse_str(file_get_contents('php://input'), $payload);
+					}
 					if ($payload === null) {
 						throw new InvalidRequest('Invalid content type: ' . $contentType);
 					}
