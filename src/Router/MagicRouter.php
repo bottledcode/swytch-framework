@@ -76,7 +76,7 @@ class MagicRouter
 							true,
 							flags: JSON_THROW_ON_ERROR
 						),
-						'application/x-www-form-urlencoded' => $_POST,
+						'application/x-www-form-urlencoded' => $_REQUEST,
 						default => null
 					};
 					if ($payload === null) {
