@@ -2,6 +2,7 @@
 
 namespace Bottledcode\SwytchFramework\Template;
 
+use Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface;
 use Masterminds\HTML5\Parser\DOMTreeBuilder;
 use Psr\Container\ContainerInterface;
 
@@ -19,7 +20,8 @@ class TreeBuilder extends DOMTreeBuilder
 		array $options,
 		private array $components,
 		private Compiler $compiler,
-		private ContainerInterface $container
+		private ContainerInterface $container,
+		private readonly StateProviderInterface $stateProvider
 	) {
 		parent::__construct($isFragment, $options);
 	}
@@ -59,17 +61,19 @@ class TreeBuilder extends DOMTreeBuilder
 				$current->appendChild($csrfElement);
 
 				// inject the current state of the form and use csrf token to verify/validate
-				$stateData = StateSync::serializeState($this->container->get('state_secret'), end(self::$componentStack)->attributes);
+				$stateData = $this->stateProvider->serializeState(end(self::$componentStack)->attributes);
 
 				$stateElement = $this->doc->createElement('input');
 				$stateElement->setAttribute('type', 'hidden');
 				$stateElement->setAttribute('name', 'state_hash');
-				$stateElement->setAttribute('value', $stateData['hash']);
+				$stateElement->setAttribute('value', $this->stateProvider->signState($stateData));
 				$current->appendChild($stateElement);
+
+				// todo: recreate refs
 				$stateElement = $this->doc->createElement('input');
 				$stateElement->setAttribute('type', 'hidden');
 				$stateElement->setAttribute('name', 'state');
-				$stateElement->setAttribute('value', $stateData['state']);
+				$stateElement->setAttribute('value', $stateData);
 				$current->appendChild($stateElement);
 
 				// inject the id that will be sent to the server
@@ -115,7 +119,11 @@ class TreeBuilder extends DOMTreeBuilder
 
 	private function getNodeAddress(): string
 	{
-		return implode('-', array_map(static fn($node) => str_replace('\\', '_', $node->compiledComponent->component), self::$componentStack));
+		return implode(
+			'-',
+			array_map(static fn($node) => str_replace('\\', '_', $node->compiledComponent->component),
+				self::$componentStack)
+		);
 	}
 
 	protected function autoclose($tagName)

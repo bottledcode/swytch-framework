@@ -7,7 +7,7 @@ use Bottledcode\SwytchFramework\Router\Attributes\Route;
 use Bottledcode\SwytchFramework\Router\Exceptions\InvalidRequest;
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
 use Bottledcode\SwytchFramework\Template\Compiler;
-use Bottledcode\SwytchFramework\Template\StateSync;
+use Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface;
 use olvlvl\ComposerAttributeCollector\Attributes;
 use olvlvl\ComposerAttributeCollector\TargetClass;
 use Psr\Container\ContainerInterface;
@@ -17,8 +17,11 @@ class MagicRouter
 {
 	private array $middleware = [];
 
+	private readonly StateProviderInterface $stateProvider;
+
 	public function __construct(private ContainerInterface $container, private string $appRoot)
 	{
+		$this->stateProvider = $this->container->get(StateProviderInterface::class);
 	}
 
 	public function withMiddleware(string $middleware): self
@@ -94,7 +97,7 @@ class MagicRouter
 						throw new InvalidRequest('Invalid state');
 					}
 					if (!empty($state)) {
-						if (!StateSync::verifyState($this->container->get('state_secret'), $state, $state_signature)) {
+						if(!$this->stateProvider->verifyState($state, $state_signature)) {
 							throw new InvalidRequest('Invalid state');
 						}
 						unset($payload['state_hash']);
@@ -124,7 +127,7 @@ class MagicRouter
 				foreach ($componentMethodParameters as $parameter) {
 					$parameterName = $parameter->getName();
 					if ($parameterName === 'state') {
-						$arguments['state'] = json_decode(base64_decode($state), true, flags: JSON_THROW_ON_ERROR);
+						$arguments['state'] = $this->stateProvider->unserializeState($state);
 					} else {
 						if ($parameter->getType() instanceof \ReflectionNamedType && $parameter->getType()->getName() === 'string') {
 							$name = $parameter->getName();

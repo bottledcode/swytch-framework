@@ -26,7 +26,8 @@
     "ext-mbstring": "*",
     "laminas/laminas-escaper": "^2.12",
     "symfony/serializer": "^6.2",
-    "symfony/property-access": "^6.2"
+    "symfony/property-access": "^6.2",
+    "ext-sodium": "*"
   },
   "require-dev": {
     "roave/security-advisories": "dev-latest",

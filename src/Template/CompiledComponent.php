@@ -27,15 +27,20 @@ readonly class CompiledComponent
 			$component->aboutToRender($attributes);
 		}
 
-		// todo: render components in attributes?
-		$attributes = array_map(static fn($attribute) => is_string($attribute) ? trim($attribute, '{}') : $attribute, $attributes);
+		$attributes = array_map(static fn($attribute) => is_string($attribute) ? trim($attribute, '{}') : $attribute,
+			$attributes);
+
+		$attributes = array_map(
+			fn($attribute) => str_starts_with($attribute, '__REF__') ? $this->compiler->getRef($attribute) : $attribute,
+			$attributes
+		);
 
 		// render the component
 		$rendered = $component->render(...$attributes);
 
 		// sanitize html tags, proper escaping comes later
 		preg_match_all('@\{([^/\{\}\x00-\x1F=]++)@', $rendered, $matches);
-		foreach($matches[1] as $match) {
+		foreach ($matches[1] as $match) {
 			$new = str_replace(['<', '>'], ['&lt;', '&gt;'], $match);
 			$rendered = str_replace("{{$match}}", "{{$new}}", $rendered);
 		}

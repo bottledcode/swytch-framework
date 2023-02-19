@@ -3,6 +3,8 @@
 namespace Bottledcode\SwytchFramework\Template;
 
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
+use Bottledcode\SwytchFramework\Template\Interfaces\RefProviderInterface;
+use Bottledcode\SwytchFramework\Template\ReferenceImplementation\SimpleRefProvider;
 use Laminas\Escaper\Escaper;
 use Masterminds\HTML5;
 use Masterminds\HTML5\Exception;
@@ -19,8 +21,30 @@ final class Compiler
 
 	private \DOMDocument|null $doc = null;
 
+	private readonly RefProviderInterface $refProvider;
+
 	public function __construct(private readonly ContainerInterface $container)
 	{
+		if ($this->container->has(RefProviderInterface::class)) {
+			$this->refProvider = $this->container->get(RefProviderInterface::class);
+		} else {
+			$this->refProvider = new SimpleRefProvider();
+		}
+	}
+
+	public function createRef(mixed $item): string
+	{
+		return $this->refProvider->createRef($item);
+	}
+
+	public function deleteRef(string $id): void
+	{
+		$this->refProvider->deleteRef($id);
+	}
+
+	public function getRef(string $id): mixed
+	{
+		return $this->refProvider->getRef($id);
 	}
 
 	/**
@@ -30,7 +54,7 @@ final class Compiler
 	 */
 	public function registerComponent(string|TargetClass $component): void
 	{
-		if($component instanceof TargetClass) {
+		if ($component instanceof TargetClass) {
 			$this->components[mb_strtolower($component->attribute->name)] = $component->name;
 			return;
 		}
