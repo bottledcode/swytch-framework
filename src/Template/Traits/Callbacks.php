@@ -44,6 +44,7 @@ trait Callbacks
 		}
 
 		header('hx-retarget: #' . $target_id);
+		header('hx-reswap: outerHTML');
 		$dom = $this->compiler->compile("<{$attribute->name} id='{{$target_id}}' {$state}></{$attribute->name}>");
 		return $this->compiler->renderCompiledHtml($dom);
 	}
