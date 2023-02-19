@@ -72,7 +72,7 @@ class MagicRouter
 					$contentType = $_SERVER['CONTENT_TYPE'] ?? '';
 					$payload = match ($contentType) {
 						'application/json' => json_decode(
-							file_get_contents('php://input'),
+							file_get_contents('php://input') ?: '',
 							true,
 							flags: JSON_THROW_ON_ERROR
 						),
