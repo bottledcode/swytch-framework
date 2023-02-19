@@ -17,7 +17,7 @@ readonly class ValidatedState implements StateProviderInterface
 
 	public function serializeState(array $state): string
 	{
-		return $this->serializer->serialize($state, 'json');
+		return json_encode($state, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
 	}
 
 	public function verifyState(string $serializedState, string $signature): bool
@@ -32,6 +32,6 @@ readonly class ValidatedState implements StateProviderInterface
 
 	public function unserializeState(string $serializedState): array
 	{
-		return $this->serializer->deserialize($serializedState, 'array', 'json');
+		return json_decode($serializedState, true, flags: JSON_THROW_ON_ERROR);
 	}
 }
