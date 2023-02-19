@@ -76,7 +76,7 @@ class TreeBuilder extends DOMTreeBuilder
 				$idElement = $this->doc->createElement('input');
 				$idElement->setAttribute('type', 'hidden');
 				$idElement->setAttribute('name', 'target_id');
-				$idElement->setAttribute('value', $this->getNodeAddress());
+				$idElement->setAttribute('value', end(self::$componentStack)->id ?? $this->getNodeAddress());
 				$current->appendChild($idElement);
 			}
 		}
@@ -94,7 +94,7 @@ class TreeBuilder extends DOMTreeBuilder
 
 			$component = new CompiledComponent($this->components[$name], $this->container, $this->compiler);
 
-			self::$componentStack[] = new RenderedComponent($component, $attributes);
+			self::$componentStack[] = new RenderedComponent($component, $attributes, $attributes['id'] ?? null);
 
 			$id = $attributes['id'] ?? $this->getNodeAddress();
 			if (!$skipHxProcessing) {
