@@ -14,6 +14,8 @@ class App {
 		return <<<HTML
 <div>
 Your name is {{$name}}.
+<form hx-post="/">
+</form>
 </div>
 HTML;
 

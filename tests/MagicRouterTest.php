@@ -40,6 +40,7 @@ it('should match a simple route', function() {
 	global $container;
 	$_SERVER['REQUEST_METHOD'] = Method::GET->value;
 	$_SERVER['REQUEST_URI'] = '/api/test';
+	$container->set(\Bottledcode\SwytchFramework\Template\Compiler::class, new \Bottledcode\SwytchFramework\Template\Compiler($container));
 	$route = new \Bottledcode\SwytchFramework\Router\MagicRouter($container, 'null');
 	$result = $route->go();
 	expect($result)->toBe('simple');

@@ -6,6 +6,7 @@ use Bottledcode\SwytchFramework\Template\Compiler;
 it('renders correctly', function () {
 	global $container;
 	$compiler = new Compiler(container: $container);
+	$container->set('state_secret', 'secret');
 	require_once __DIR__ . '/SimpleApp/App.php';
 	require_once __DIR__ . '/SimpleApp/Index.php';
 	$compiler->registerComponent(Index::class);

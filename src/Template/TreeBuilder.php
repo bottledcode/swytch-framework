@@ -40,16 +40,18 @@ class TreeBuilder extends DOMTreeBuilder
 			if ($formAddress !== null) {
 				// inject csrf token
 				$token = base64_encode(random_bytes(32));
-				setcookie(
-					"csrf_token",
-					$token,
-					[
-						'samesite' => 'strict',
-						'httponly' => true,
-						...(($_SERVER['HTTPS'] ?? false) ? ['secure' => true] : []),
-						'path' => $formAddress
-					]
-				);
+				if (!headers_sent()) {
+					setcookie(
+						"csrf_token",
+						$token,
+						[
+							'samesite' => 'strict',
+							'httponly' => true,
+							...(($_SERVER['HTTPS'] ?? false) ? ['secure' => true] : []),
+							'path' => $formAddress
+						]
+					);
+				}
 				$csrfElement = $this->doc->createElement('input');
 				$csrfElement->setAttribute('type', 'hidden');
 				$csrfElement->setAttribute('name', 'csrf_token');
@@ -74,7 +76,7 @@ class TreeBuilder extends DOMTreeBuilder
 				$idElement = $this->doc->createElement('input');
 				$idElement->setAttribute('type', 'hidden');
 				$idElement->setAttribute('name', 'target_id');
-				$idElement->setAttribute('value', end(self::$componentStack)->id);
+				$idElement->setAttribute('value', $this->getNodeAddress());
 				$current->appendChild($idElement);
 			}
 		}
@@ -92,7 +94,7 @@ class TreeBuilder extends DOMTreeBuilder
 
 			$component = new CompiledComponent($this->components[$name], $this->container, $this->compiler);
 
-			self::$componentStack[] = new RenderedComponent($component, $attributes, $this->getNodeAddress());
+			self::$componentStack[] = new RenderedComponent($component, $attributes);
 
 			if (!$skipHxProcessing) {
 				$current->setAttribute('id', $this->getNodeAddress());
