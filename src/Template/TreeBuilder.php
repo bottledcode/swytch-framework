@@ -73,7 +73,7 @@ class TreeBuilder extends DOMTreeBuilder
 				// inject the id that will be sent to the server
 				$idElement = $this->doc->createElement('input');
 				$idElement->setAttribute('type', 'hidden');
-				$idElement->setAttribute('name', 'hx-id');
+				$idElement->setAttribute('name', 'target_id');
 				$idElement->setAttribute('value', end(self::$componentStack)->id);
 				$current->appendChild($idElement);
 			}

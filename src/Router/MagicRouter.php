@@ -2,6 +2,7 @@
 
 namespace Bottledcode\SwytchFramework\Router;
 
+use Bottledcode\SwytchFramework\Router\Attributes\From;
 use Bottledcode\SwytchFramework\Router\Attributes\Route;
 use Bottledcode\SwytchFramework\Router\Exceptions\InvalidRequest;
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
@@ -125,10 +126,14 @@ class MagicRouter
 					if ($parameterName === 'state') {
 						$arguments['state'] = json_decode(base64_decode($state), true, flags: JSON_THROW_ON_ERROR);
 					} else {
-						if ($parameter->getType() instanceof \ReflectionNamedType && $parameter->getType()->getName(
-							) === 'string') {
-							$arguments[$parameter->getName()] = $payload[$parameter->getName(
-							)] ?? throw new InvalidRequest('Missing parameter: ' . $parameter->getName());
+						if ($parameter->getType() instanceof \ReflectionNamedType && $parameter->getType()->getName() === 'string') {
+							$name = $parameter->getName();
+							if($from = $parameter->getAttributes(From::class)) {
+								$name = $from[0]->newInstance()->name;
+							}
+
+							$arguments[$parameter->getName()]
+								= $payload[$name] ?? throw new InvalidRequest('Missing parameter: ' . $parameter->getName());
 						} elseif (class_exists($parameter->getType()->getName())) {
 							/** @var Serializer $serializer */
 							$serializer = $this->container->get(Serializer::class);
@@ -148,5 +153,9 @@ class MagicRouter
 		}
 
 		return null;
+	}
+
+	private function sanitizeName(string $name): string {
+		return preg_replace('/[^a-z0-9_]/i', '_', $name);
 	}
 }
