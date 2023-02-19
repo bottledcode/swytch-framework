@@ -1,11 +1,11 @@
 <?php
 
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
-use Bottledcode\SwytchFramework\Template\Traits\Callbacks;
+use Bottledcode\SwytchFramework\Template\Traits\Htmx;
 
 #[Component('Test')]
 class Test {
-	use Callbacks;
+	use Htmx;
 
 	public function onKeyUp(string $event): void {
 	}
