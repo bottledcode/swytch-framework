@@ -43,7 +43,7 @@ class TreeBuilder extends DOMTreeBuilder
 		if ($name === 'form') {
 			$formAddress = $attributes['hx-post'] ?? $attributes['hx-put'] ?? $attributes['hx-delete'] ?? $attributes['hx-patch'] ?? null;
 			preg_match_all(Output::ESCAPE_SEQUENCE, $formAddress, $matches);
-			foreach($matches[1] as $match) {
+			foreach ($matches[1] as $match) {
 				$match = trim($match, '{}');
 				/**
 				 * @var Escaper $escaper
@@ -105,7 +105,7 @@ class TreeBuilder extends DOMTreeBuilder
 
 			$component = new CompiledComponent($this->components[$name], $this->container, $this->compiler);
 
-			$id = $attributes['id'] ?? 'id'. substr(md5(random_bytes(8) . time()), 0, 6);
+			$id = $attributes['id'] ?? 'id' . substr(md5(random_bytes(8) . time()), 0, 6);
 
 			self::$componentStack[] = new RenderedComponent($component, $attributes, $id);
 
@@ -113,13 +113,14 @@ class TreeBuilder extends DOMTreeBuilder
 				$current->setAttribute('id', $id);
 			}
 			unset($attributes['id']);
-			$originalAttributes = $attributes;
+			$usedAttributes = $component->getUsedAttributes();
 
-			$content = $component->compile($attributes);
 			// we need to remove the attributes from the component
-			foreach (array_diff_key($originalAttributes, $attributes) as $key => $value) {
+			foreach (array_diff_key($attributes, $usedAttributes) as $key => $value) {
 				$current->removeAttribute($key);
 			}
+
+			$content = $component->compile(array_intersect_key($attributes, $usedAttributes));
 
 			if ($content->childElementCount > 0) {
 				$current->appendChild($content);

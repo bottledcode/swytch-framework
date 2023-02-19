@@ -25,7 +25,22 @@ readonly class CompiledComponent
 		return $this->compiler->renderCompiledHtml($this->compile());
 	}
 
-	public function compile(array &$attributes = []): \DOMDocument|\DOMDocumentFragment
+	public function getUsedAttributes(): array {
+		$attributes = [];
+		try {
+			$classReflection = new ReflectionClass($this->component);
+			$methodReflection = $classReflection->getMethod('render');
+			$parameterReflection = $methodReflection->getParameters();
+			foreach($parameterReflection as $parameter) {
+				$attributes[] = $parameter->getName();
+			}
+		} catch (\ReflectionException $e) {
+			throw new \RuntimeException("Component {$this->component} does not have a render method");
+		}
+		return array_flip($attributes);
+	}
+
+	public function compile(array $attributes = []): \DOMDocument|\DOMDocumentFragment
 	{
 		// we are about to render
 		$component = $this->container->get($this->component);
@@ -33,28 +48,13 @@ readonly class CompiledComponent
 			$component->aboutToRender($attributes);
 		}
 
-		$myAttributes = array_map(static fn($attribute) => is_string($attribute) ? trim($attribute, '{}') : $attribute,
+		$attributes = array_map(static fn($attribute) => is_string($attribute) ? trim($attribute, '{}') : $attribute,
 			$attributes);
 
-		$myAttributes = array_map(
+		$attributes = array_map(
 			fn($attribute) => str_starts_with($attribute, '__REF__') ? $this->compiler->getRef($attribute) : $attribute,
-			$myAttributes
+			$attributes
 		);
-
-		$attributes = [];
-
-		try {
-			$classReflection = new ReflectionClass($this->component);
-			$methodReflection = $classReflection->getMethod('render');
-			$parameterReflection = $methodReflection->getParameters();
-			foreach($parameterReflection as $parameter) {
-				if(array_key_exists($parameter->getName(), $myAttributes)) {
-					$attributes[$parameter->getName()] = $myAttributes[$parameter->getName()];
-				}
-			}
-		} catch (\ReflectionException $e) {
-			throw new \RuntimeException("Component {$this->component} does not have a render method");
-		}
 
 		// render the component
 		$rendered = $component->render(...$attributes);
