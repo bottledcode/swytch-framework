@@ -13,7 +13,7 @@ trait Htmx
 	private Serializer $serializer;
 	private Compiler $compiler;
 
-	private function render(string $html): string
+	private function html(string $html): string
 	{
 		$dom = $this->compiler->compile($html);
 		return $this->compiler->renderCompiledHtml($dom);
