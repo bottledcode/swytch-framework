@@ -23,6 +23,8 @@ class Output extends OutputRules
 			$match = trim($match, '{}');
 			$text = str_replace("{{$match}}",$attribute ? $this->escaper->escapeHtmlAttr($match) : $this->escaper->escapeHtml($match), $text);
 		}
+		// handle 'false' variables
+		$text = str_replace('{}', '', $text);
 		return $text;
 	}
 }
