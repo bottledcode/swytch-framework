@@ -40,7 +40,7 @@ class MagicRouter
 		if (str_starts_with($currentPath, '/api')) {
 			// handle api routes
 			$apiRoutes = Attributes::findTargetMethods(Route::class);
-			$currentPathParts = array_values(array_filter(explode('/', $currentPath)));
+			$currentPathParts = array_values(array_filter(explode('/', $currentPath), fn($part) => $part !== ''));
 			$currentMethod = Method::tryFrom($_SERVER['REQUEST_METHOD']);
 			foreach ($apiRoutes as $route) {
 				/**
