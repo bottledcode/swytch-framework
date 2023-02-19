@@ -112,7 +112,7 @@ trait Htmx
 		header("HX-Push-Url: $url");
 	}
 
-	private function rerender(string $target_id, array $withState = []): string
+	private function rerender(string $target_id, array $withState = [], string $prependHtml = ''): string
 	{
 		$attributes = Attributes::forClass(static::class);
 
@@ -145,7 +145,7 @@ trait Htmx
 
 		header('hx-retarget: #' . $target_id);
 		header('hx-reswap: outerHTML');
-		$dom = $this->compiler->compile("<{$attribute->name} id='{{$target_id}}' {$state}></{$attribute->name}>");
+		$dom = $this->compiler->compile("$prependHtml\n<{$attribute->name} id='{{$target_id}}' {$state}></{$attribute->name}>");
 		return $this->compiler->renderCompiledHtml($dom);
 	}
 }
