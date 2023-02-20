@@ -11,10 +11,16 @@ class Test {
 	}
 
 	public function render(string $stuff = '') {
+		$script = "alert('Hello World!')";
+		$style = 'h1 { color: red; }';
 		return <<<HTML
 <div>
+	<style>{{$style}}</style>
 	<h1>{{$stuff}}</h1>
-	<input onkeyup="{{$this->onKeyUp}}" />
+	<input />
+	<script>
+	{{$script}}
+	</script>
 </div>
 HTML;
 	}

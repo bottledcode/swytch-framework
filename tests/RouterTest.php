@@ -5,7 +5,6 @@ use Bottledcode\SwytchFramework\Template\CompiledComponent;
 use Bottledcode\SwytchFramework\Template\Compiler;
 use Bottledcode\SwytchFramework\Template\Functional\DefaultRoute;
 use Bottledcode\SwytchFramework\Template\Functional\Route;
-use Bottledcode\SwytchFramework\Template\StateSync;
 
 it('can be used to route to other components based on request', function () {
 	global $container;
@@ -68,6 +67,7 @@ it('can render an htmx trigger', function () {
 	$compiler = new Compiler(container: $container);
 	require_once __DIR__ .'/RouterApp/Index.php';
 	require_once __DIR__ .'/RouterApp/Test.php';
+	$container->set(\Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface::class, new \Bottledcode\SwytchFramework\Template\ReferenceImplementation\ValidatedState('123', $container->get(\Symfony\Component\Serializer\Serializer::class)));
 	$compiler->registerComponent(RouterAppIndex::class);
 	$compiler->registerComponent(Route::class);
 	$compiler->registerComponent(DefaultRoute::class);
