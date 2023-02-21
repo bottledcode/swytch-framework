@@ -41,7 +41,7 @@ class TreeBuilder extends DOMTreeBuilder
 		}
 
 		if ($name === 'form') {
-			$formAddress = $attributes['hx-post'] ?? $attributes['hx-put'] ?? $attributes['hx-delete'] ?? $attributes['hx-patch'] ?? null;
+			$formAddress = $attributes['hx-post'] ?? $attributes['hx-put'] ?? $attributes['hx-delete'] ?? $attributes['hx-patch'] ?? '';
 			preg_match_all(Output::ESCAPE_SEQUENCE, $formAddress, $matches);
 			foreach ($matches[1] as $match) {
 				$match = trim($match, '{}');
