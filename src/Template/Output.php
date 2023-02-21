@@ -39,6 +39,10 @@ class Output extends OutputRules
 	private function style(string $text): string {
 		preg_match_all(self::ESCAPE_SEQUENCE, $text, $matches);
 		foreach ($matches[1] as $match) {
+			if(str_starts_with($match, '{{')) {
+				// this is a literal, don't escape it
+				continue;
+			}
 			$match = trim($match, '{}');
 			$text = str_replace(
 				"{{$match}}",
@@ -53,6 +57,10 @@ class Output extends OutputRules
 	private function script(string $text): string {
 		preg_match_all(self::ESCAPE_SEQUENCE, $text, $matches);
 		foreach ($matches[1] as $match) {
+			if(str_starts_with($match, '{{')) {
+				// this is a literal, don't escape it
+				continue;
+			}
 			$match = trim($match, '{}');
 			$text = str_replace(
 				"{{$match}}",
