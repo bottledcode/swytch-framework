@@ -2,6 +2,7 @@
 
 namespace Bottledcode\SwytchFramework\Template;
 
+use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
 use Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface;
 use Laminas\Escaper\Escaper;
 use Masterminds\HTML5\Parser\DOMTreeBuilder;
@@ -120,7 +121,11 @@ class TreeBuilder extends DOMTreeBuilder
 				$current->removeAttribute($key);
 			}
 
-			$content = $component->compile(array_intersect_key($attributes, $usedAttributes));
+			$blobber = $this->container->get(EscaperInterface::class);
+			$passedAttributes = array_intersect_key($attributes, $usedAttributes);
+			$passedAttributes = array_map(fn($value) => $blobber->replaceBlobs($value, $escaper->escapeHtmlAttr(...)), $passedAttributes);
+
+			$content = $component->compile($passedAttributes);
 
 			if ($content->childElementCount > 0) {
 				$current->appendChild($content);
