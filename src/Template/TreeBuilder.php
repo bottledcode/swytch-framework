@@ -18,8 +18,6 @@ class TreeBuilder extends DOMTreeBuilder
 
 	private readonly StateProviderInterface $stateProvider;
 
-	public \WeakMap $blobs;
-
 	public function __construct(
 		bool $isFragment,
 		array $options,
@@ -125,9 +123,8 @@ class TreeBuilder extends DOMTreeBuilder
 
 			$content = $component->compile(array_intersect_key($attributes, $usedAttributes));
 
-			if ($content->document->childElementCount > 0) {
-				$this->blobs[$content->document] = $content->blobs;
-				$current->appendChild($content->document);
+			if ($content->childElementCount > 0) {
+				$current->appendChild($content);
 			}
 
 			array_pop(self::$componentStack);
