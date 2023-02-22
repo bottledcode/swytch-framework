@@ -11,6 +11,17 @@ class Output extends OutputRules
 
 	private Escaper $escaper;
 
+	private array $blobs = [];
+
+	public function __construct($output, $options = array())
+	{
+		parent::__construct($output, $options);
+	}
+
+	public function setBlobs(array $blobs): void {
+		$this->blobs = $blobs;
+	}
+
 	public function setEscaper(Escaper $escaper): void
 	{
 		$this->escaper = $escaper;

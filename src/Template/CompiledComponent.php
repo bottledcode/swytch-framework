@@ -40,7 +40,30 @@ readonly class CompiledComponent
 		return array_flip($attributes);
 	}
 
-	public function compile(array $attributes = []): \DOMDocument|\DOMDocumentFragment
+	private function extractBlobs(string $html, array &$blobs = []): string {
+		$next = strtok($html, '{');
+		if($next === $html) {
+			return $html;
+		}
+
+		$future = $next;
+
+		while(true) {
+			$blob = strtok('}');
+			if($blob === false) {
+				return $future;
+			}
+			$blobs[] = $blob;
+			$future .= '__BLOB__' . count($blobs) . '__';
+			$next = strtok('{');
+			$future .= $next;
+			if($next === false) {
+				return $future;
+			}
+		}
+	}
+
+	public function compile(array $attributes = []): CompiledHtml
 	{
 		// we are about to render
 		$component = $this->container->get($this->component);
@@ -59,13 +82,9 @@ readonly class CompiledComponent
 		// render the component
 		$rendered = $component->render(...$attributes);
 
-		// sanitize html tags, proper escaping comes later
-		preg_match_all('@\{([^/\{\}\x00-\x1F=]++)@', $rendered, $matches);
-		foreach ($matches[1] as $match) {
-			$new = str_replace(['<', '>'], ['&lt;', '&gt;'], $match);
-			$rendered = str_replace("{{$match}}", "{{$new}}", $rendered);
-		}
+		$blobs = [];
+		$rendered = $this->extractBlobs($rendered, $blobs);
 
-		return $this->compiler->compile($rendered);
+		return new CompiledHtml($this->compiler->compile($rendered), $blobs);
 	}
 }

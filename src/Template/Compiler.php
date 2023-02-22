@@ -86,6 +86,9 @@ final class Compiler
 		if (str_contains($html, '</body>')) {
 			$html = str_replace('</body>', '<script src="https://unpkg.com/htmx.org@1.8.5"></script></body>', $html);
 		}
+
+
+
 		$events = new TreeBuilder(
 			$isFragment,
 			[...self::OPTIONS, 'target_document' => $this->doc],
@@ -97,62 +100,18 @@ final class Compiler
 			$this->doc = $events->document();
 		}
 		$scanner = new HTML5\Parser\Scanner($html, 'UTF-8');
-		$parser = new EscapingParser($scanner, $events, HTML5\Parser\Tokenizer::CONFORMANT_HTML);
+		$parser = new HTML5\Parser\Tokenizer($scanner, $events, HTML5\Parser\Tokenizer::CONFORMANT_HTML);
 
 		$parser->parse();
 
 		return $isFragment ? $events->fragment() : $events->document();
 	}
 
-	private function parseFragment(object|string $fragmentClass): array
-	{
-		$reflector = new \ReflectionClass($fragmentClass);
-		$file = $reflector->getFileName();
-		if ($file === false) {
-			return [];
-		}
-
-		$content = file_get_contents($file);
-		if ($content === false) {
-			return [];
-		}
-		$fragments = [];
-		while (true) {
-			$content = strstr($content, '<<<HTML');
-			if (empty($content)) {
-				break;
-			}
-			$content = substr($content, strlen('<<<HTML'));
-			$fragment = strstr($content, 'HTML;', true);
-			if (empty($fragment)) {
-				return [];
-			}
-			$fragments[] = $fragment;
-		}
-
-		$compiledFragments = [];
-
-		foreach ($fragments as $fragment) {
-			$events = new TreeBuilder(true, self::OPTIONS, $this->components, $this, );
-			$scanner = new HTML5\Parser\Scanner($fragment, 'UTF-8');
-			$parser = new HTML5\Parser\Tokenizer($scanner, $events, HTML5\Parser\Tokenizer::CONFORMANT_HTML);
-
-			$parser->parse();
-
-			$compiledFragments[md5($fragment)] = [
-				'compiled' => $this->renderCompiledHtml($events->fragment()),
-				'original' => $fragment
-			];
-		}
-
-		return $compiledFragments;
-	}
-
 	/**
 	 * @throws Exception
 	 */
 
-	public function renderCompiledHtml(\DOMDocument|\DOMDocumentFragment $dom): string
+	public function renderCompiledHtml(CompiledHtml $compiledHtml): string
 	{
 		$file = fopen('php://temp', 'wb');
 		if ($file === false) {
@@ -161,7 +120,8 @@ final class Compiler
 
 		$rules = new Output($file, self::OPTIONS);
 		$rules->setEscaper($this->container->get(Escaper::class));
-		$traverser = new HTML5\Serializer\Traverser($dom, $file, $rules, self::OPTIONS);
+		$rules->setBlobs($compiledHtml->blobs);
+		$traverser = new HTML5\Serializer\Traverser($compiledHtml->document, $file, $rules, self::OPTIONS);
 
 		$traverser->walk();
 
