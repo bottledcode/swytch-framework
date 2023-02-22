@@ -41,15 +41,16 @@ class TreeBuilder extends DOMTreeBuilder
 			$current = $this->current->lastChild;
 		}
 
+		/**
+		 * @var Escaper $escaper
+		 */
+		$escaper = $this->container->get(Escaper::class);
+
 		if ($name === 'form') {
 			$formAddress = $attributes['hx-post'] ?? $attributes['hx-put'] ?? $attributes['hx-delete'] ?? $attributes['hx-patch'] ?? '';
 			preg_match_all(Output::ESCAPE_SEQUENCE, $formAddress, $matches);
 			foreach ($matches[1] as $match) {
 				$match = trim($match, '{}');
-				/**
-				 * @var Escaper $escaper
-				 */
-				$escaper = $this->container->get(Escaper::class);
 				$formAddress = str_replace("{{$match}}", $escaper->escapeUrl($match), $formAddress);
 			}
 			if ($formAddress !== null) {
