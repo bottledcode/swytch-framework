@@ -40,7 +40,8 @@ readonly class CompiledComponent
 		return array_flip($attributes);
 	}
 
-	private function extractBlobs(string $html, array &$blobs = []): string {
+	public static function extractBlobs(string $html, array &$blobs = []): string {
+		$html = str_replace('{}', '', $html);
 		$next = strtok($html, '{');
 		if($next === $html) {
 			return $html;

@@ -3,6 +3,8 @@
 namespace Bottledcode\SwytchFramework\Template\Traits;
 
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
+use Bottledcode\SwytchFramework\Template\CompiledComponent;
+use Bottledcode\SwytchFramework\Template\CompiledHtml;
 use Bottledcode\SwytchFramework\Template\Compiler;
 use Bottledcode\SwytchFramework\Template\Enum\HtmxSwap;
 use olvlvl\ComposerAttributeCollector\Attributes;
@@ -15,8 +17,10 @@ trait Htmx
 
 	private function html(string $html): string
 	{
+		$blobs = [];
+		$html = CompiledComponent::extractBlobs($html, $blobs);
 		$dom = $this->compiler->compile($html);
-		return $this->compiler->renderCompiledHtml($dom);
+		return $this->compiler->renderCompiledHtml(new CompiledHtml($dom, $blobs));
 	}
 
 	/**
