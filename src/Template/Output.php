@@ -2,6 +2,7 @@
 
 namespace Bottledcode\SwytchFramework\Template;
 
+use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
 use Laminas\Escaper\Escaper;
 use Masterminds\HTML5\Serializer\OutputRules;
 
@@ -11,14 +12,14 @@ class Output extends OutputRules
 
 	private Escaper $escaper;
 
-	private array $blobs = [];
+	private EscaperInterface $blobs;
 
 	public function __construct($output, $options = array())
 	{
 		parent::__construct($output, $options);
 	}
 
-	public function setBlobs(array $blobs): void {
+	public function setBlobber(EscaperInterface $blobs): void {
 		$this->blobs = $blobs;
 	}
 
@@ -48,6 +49,8 @@ class Output extends OutputRules
 	}
 
 	private function style(string $text): string {
+		return $this->blobs->replaceBlobs($text, fn($blob) => $this->escaper->escapeCss($blob));
+
 		preg_match_all(self::ESCAPE_SEQUENCE, $text, $matches);
 		foreach ($matches[1] as $match) {
 			$match = trim($match, '{}');
@@ -62,6 +65,8 @@ class Output extends OutputRules
 	}
 
 	private function script(string $text): string {
+		return $this->blobs->replaceBlobs($text, fn($blob) => $this->escaper->escapeJs($blob));
+
 		preg_match_all(self::ESCAPE_SEQUENCE, $text, $matches);
 		foreach ($matches[1] as $match) {
 			$match = trim($match, '{}');
@@ -77,6 +82,7 @@ class Output extends OutputRules
 
 	public function enc($text, $attribute = false)
 	{
+		return $this->blobs->replaceBlobs($text, fn($blob) => $attribute ? $this->escaper->escapeHtmlAttr($blob) : $this->escaper->escapeHtml($blob));
 		preg_match_all(self::ESCAPE_SEQUENCE, $text, $matches);
 		foreach ($matches[1] as $match) {
 			$match = trim($match, '{}');

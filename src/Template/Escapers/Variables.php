@@ -40,10 +40,13 @@ class Variables implements EscaperInterface {
 		}
 	}
 
-	public function replaceBlobs(string $html): string
+	public function replaceBlobs(string $html, callable $processor): string
 	{
 		foreach($this->blobs as $key => $blob) {
-			$html = str_replace($key, $blob, $html);
+			if(str_contains($html, $key)) {
+				$blob = $processor($blob);
+				$html = str_replace($key, $blob, $html);
+			}
 		}
 
 		return $html;

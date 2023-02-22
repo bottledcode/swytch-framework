@@ -130,6 +130,7 @@ final class Compiler
 
 		$rules = new Output($file, self::OPTIONS);
 		$rules->setEscaper($this->container->get(Escaper::class));
+		$rules->setBlobber($this->escaper);
 		$traverser = new HTML5\Serializer\Traverser($document, $file, $rules, self::OPTIONS);
 
 		$traverser->walk();

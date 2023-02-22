@@ -15,9 +15,10 @@ interface EscaperInterface {
 	 * Given a string, replaces __BLOB__N__ with the blob at index N
 	 *
 	 * @param string $html
+	 * @param callable $processor
 	 * @return string
 	 */
-	public function replaceBlobs(string $html): string;
+	public function replaceBlobs(string $html, callable $processor): string;
 
 	public function getBlobs(): array;
 
