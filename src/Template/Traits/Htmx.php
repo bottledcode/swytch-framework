@@ -17,10 +17,8 @@ trait Htmx
 
 	private function html(string $html): string
 	{
-		$blobs = [];
-		$html = CompiledComponent::extractBlobs($html, $blobs);
 		$dom = $this->compiler->compile($html);
-		return $this->compiler->renderCompiledHtml(new CompiledHtml($dom, $blobs));
+		return $this->compiler->renderCompiledHtml($dom);
 	}
 
 	/**

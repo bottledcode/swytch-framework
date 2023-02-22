@@ -3,6 +3,8 @@
 namespace Bottledcode\SwytchFramework\Template;
 
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
+use Bottledcode\SwytchFramework\Template\Escapers\Variables;
+use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
 use Bottledcode\SwytchFramework\Template\Interfaces\RefProviderInterface;
 use Bottledcode\SwytchFramework\Template\ReferenceImplementation\SimpleRefProvider;
 use Laminas\Escaper\Escaper;
@@ -23,12 +25,20 @@ final class Compiler
 
 	private readonly RefProviderInterface $refProvider;
 
+	private readonly EscaperInterface $escaper;
+
 	public function __construct(private readonly ContainerInterface $container)
 	{
 		if ($this->container->has(RefProviderInterface::class)) {
 			$this->refProvider = $this->container->get(RefProviderInterface::class);
 		} else {
 			$this->refProvider = new SimpleRefProvider();
+		}
+
+		if($this->container->has(EscaperInterface::class)) {
+			$this->escaper = $this->container->get(EscaperInterface::class);
+		} else {
+			$this->escaper = new Variables();
 		}
 	}
 
@@ -87,7 +97,7 @@ final class Compiler
 			$html = str_replace('</body>', '<script src="https://unpkg.com/htmx.org@1.8.5"></script></body>', $html);
 		}
 
-
+		$html = $this->escaper->makeBlobs($html);
 
 		$events = new TreeBuilder(
 			$isFragment,
@@ -111,7 +121,7 @@ final class Compiler
 	 * @throws Exception
 	 */
 
-	public function renderCompiledHtml(CompiledHtml $compiledHtml): string
+	public function renderCompiledHtml(\DOMDocument|\DOMDocumentFragment $document): string
 	{
 		$file = fopen('php://temp', 'wb');
 		if ($file === false) {
@@ -120,8 +130,7 @@ final class Compiler
 
 		$rules = new Output($file, self::OPTIONS);
 		$rules->setEscaper($this->container->get(Escaper::class));
-		$rules->setBlobs($compiledHtml->blobs);
-		$traverser = new HTML5\Serializer\Traverser($compiledHtml->document, $file, $rules, self::OPTIONS);
+		$traverser = new HTML5\Serializer\Traverser($document, $file, $rules, self::OPTIONS);
 
 		$traverser->walk();
 

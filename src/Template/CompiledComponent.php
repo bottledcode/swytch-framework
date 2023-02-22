@@ -3,6 +3,7 @@
 namespace Bottledcode\SwytchFramework\Template;
 
 use Bottledcode\SwytchFramework\Template\Interfaces\BeforeRenderInterface;
+use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
 use Psr\Container\ContainerInterface;
 use ReflectionClass;
 
@@ -40,31 +41,7 @@ readonly class CompiledComponent
 		return array_flip($attributes);
 	}
 
-	public static function extractBlobs(string $html, array &$blobs = []): string {
-		$html = str_replace('{}', '', $html);
-		$next = strtok($html, '{');
-		if($next === $html) {
-			return $html;
-		}
-
-		$future = $next;
-
-		while(true) {
-			$blob = strtok('}');
-			if($blob === false) {
-				return $future;
-			}
-			$blobs[] = $blob;
-			$future .= '__BLOB__' . count($blobs) . '__';
-			$next = strtok('{');
-			$future .= $next;
-			if($next === false) {
-				return $future;
-			}
-		}
-	}
-
-	public function compile(array $attributes = []): CompiledHtml
+	public function compile(array $attributes = []): \DOMDocument|\DOMDocumentFragment
 	{
 		// we are about to render
 		$component = $this->container->get($this->component);
@@ -83,9 +60,6 @@ readonly class CompiledComponent
 		// render the component
 		$rendered = $component->render(...$attributes);
 
-		$blobs = [];
-		$rendered = $this->extractBlobs($rendered, $blobs);
-
-		return new CompiledHtml($this->compiler->compile($rendered), $blobs);
+		return $this->compiler->compile($rendered);
 	}
 }
