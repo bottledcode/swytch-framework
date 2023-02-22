@@ -10,8 +10,8 @@ use Symfony\Component\Serializer\Serializer;
 
 trait Htmx
 {
-	private Serializer $serializer;
-	private Compiler $compiler;
+	private readonly Serializer $serializer;
+	private readonly Compiler $compiler;
 
 	private function html(string $html): string
 	{
