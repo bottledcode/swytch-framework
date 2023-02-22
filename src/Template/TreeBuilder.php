@@ -2,10 +2,14 @@
 
 namespace Bottledcode\SwytchFramework\Template;
 
+use Bottledcode\SwytchFramework\Template\Attributes\Authenticated;
+use Bottledcode\SwytchFramework\Template\Attributes\Authorized;
+use Bottledcode\SwytchFramework\Template\Interfaces\AuthenticationServiceInterface;
 use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
 use Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface;
 use Laminas\Escaper\Escaper;
 use Masterminds\HTML5\Parser\DOMTreeBuilder;
+use olvlvl\ComposerAttributeCollector\Attributes;
 use Psr\Container\ContainerInterface;
 
 class TreeBuilder extends DOMTreeBuilder
@@ -25,6 +29,7 @@ class TreeBuilder extends DOMTreeBuilder
 		private array $components,
 		private Compiler $compiler,
 		private ContainerInterface $container,
+		private AuthenticationServiceInterface $authenticationService,
 	) {
 		parent::__construct($isFragment, $options);
 		$this->stateProvider = $this->container->get(StateProviderInterface::class);
@@ -101,6 +106,35 @@ class TreeBuilder extends DOMTreeBuilder
 
 		if (array_key_exists($name, $this->components)) {
 			$skipHxProcessing = false;
+
+			// check if the component should be rendered
+			$classAttr = Attributes::forClass($this->components[$name]);
+			foreach($classAttr as $attr) {
+				if($attr instanceof Authenticated) {
+					$userAuthenticated = $this->authenticationService->isAuthenticated();
+					switch([$userAuthenticated, $attr->visible]) {
+						// set to visible and user is authenticated
+						case [true, true]:
+						case [false, false]:
+							continue 2;
+						case [false, true]: // set to visible and user is not authenticated
+						case [true, false]: // set to not visible and user is not authenticated
+							return $mode;
+					}
+				}
+				if($attr instanceof Authorized) {
+					$userAuthorized = $this->authenticationService->isAuthorizedVia(...$attr->roles);
+					switch([$userAuthorized, $attr->visible]) {
+						case [true, true]:
+						case [false, false]:
+							continue 2;
+							case [false, true]:
+							case [true, false]:
+								return $mode;
+					}
+				}
+			}
+
 			if (method_exists($this->components[$name], 'skipHxProcessing')) {
 				$skipHxProcessing = ($this->components[$name])::skipHxProcessing();
 			}

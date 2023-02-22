@@ -2,11 +2,14 @@
 
 namespace Bottledcode\SwytchFramework\Router;
 
+use Bottledcode\SwytchFramework\Router\Attributes\Authorized;
 use Bottledcode\SwytchFramework\Router\Attributes\From;
 use Bottledcode\SwytchFramework\Router\Attributes\Route;
 use Bottledcode\SwytchFramework\Router\Exceptions\InvalidRequest;
+use Bottledcode\SwytchFramework\Router\Exceptions\NotAuthorized;
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
 use Bottledcode\SwytchFramework\Template\Compiler;
+use Bottledcode\SwytchFramework\Template\Interfaces\AuthenticationServiceInterface;
 use Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface;
 use olvlvl\ComposerAttributeCollector\Attributes;
 use olvlvl\ComposerAttributeCollector\TargetClass;
@@ -64,6 +67,17 @@ class MagicRouter
 						if ($matchPathParts[$i] !== $currentPathParts[$i]) {
 							continue 2;
 						}
+					}
+				}
+
+				// deterrmine if the user is authorized to access the route
+				foreach(Attributes::findTargetMethods(Authorized::class) as $target) {
+					if([$target->class, $target->name] === [$route->class, $route->name]) {
+						$authorized = $this->container->get(AuthenticationServiceInterface::class)->isAuthorized(...$target->attribute->roles);
+						if(!$authorized) {
+							throw new NotAuthorized();
+						}
+						break;
 					}
 				}
 
