@@ -97,7 +97,7 @@ final class Compiler
 			$this->doc = $events->document();
 		}
 		$scanner = new HTML5\Parser\Scanner($html, 'UTF-8');
-		$parser = new HTML5\Parser\Tokenizer($scanner, $events, HTML5\Parser\Tokenizer::CONFORMANT_HTML);
+		$parser = new EscapingParser($scanner, $events, HTML5\Parser\Tokenizer::CONFORMANT_HTML);
 
 		$parser->parse();
 
