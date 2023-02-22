@@ -18,6 +18,8 @@ class TreeBuilder extends DOMTreeBuilder
 
 	private readonly StateProviderInterface $stateProvider;
 
+	public \WeakMap $blobs;
+
 	public function __construct(
 		bool $isFragment,
 		array $options,
@@ -26,6 +28,7 @@ class TreeBuilder extends DOMTreeBuilder
 		private ContainerInterface $container,
 	) {
 		parent::__construct($isFragment, $options);
+		$this->blobs = new \WeakMap();
 		$this->stateProvider = $this->container->get(StateProviderInterface::class);
 	}
 
@@ -123,7 +126,7 @@ class TreeBuilder extends DOMTreeBuilder
 			$content = $component->compile(array_intersect_key($attributes, $usedAttributes));
 
 			if ($content->document->childElementCount > 0) {
-				$content->document->setUserData('blobs', $content->blobs, null);
+				$this->blobs[$content->document] = $content->blobs;
 				$current->appendChild($content->document);
 			}
 
