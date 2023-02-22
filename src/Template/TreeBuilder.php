@@ -122,8 +122,9 @@ class TreeBuilder extends DOMTreeBuilder
 
 			$content = $component->compile(array_intersect_key($attributes, $usedAttributes));
 
-			if ($content->childElementCount > 0) {
-				$current->appendChild($content);
+			if ($content->document->childElementCount > 0) {
+				$content->document->setUserData('blobs', $content->blobs, null);
+				$current->appendChild($content->document);
 			}
 
 			array_pop(self::$componentStack);
