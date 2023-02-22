@@ -44,8 +44,7 @@ class Variables implements EscaperInterface {
 
 	public function makeBlobs(string $html): string
 	{
-		$boundaries = substr(dangerous(''), 0, 8);
-		$html = $this->createBlobWithBoundaries($html, $boundaries, $boundaries);
+		$html = $this->createBlobWithBoundaries($html, "\0", "\0");
 		return $this->createBlobWithBoundaries($html, self::LEFT, self::RIGHT);
 	}
 
