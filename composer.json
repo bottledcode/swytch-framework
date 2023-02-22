@@ -6,7 +6,10 @@
   "autoload": {
     "psr-4": {
       "Bottledcode\\SwytchFramework\\": "src/"
-    }
+    },
+    "files": [
+      "src/Template/functions.php"
+    ]
   },
   "authors": [
     {

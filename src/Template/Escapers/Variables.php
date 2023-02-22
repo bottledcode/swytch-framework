@@ -4,6 +4,8 @@ namespace Bottledcode\SwytchFramework\Template\Escapers;
 
 use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
 
+use function Bottledcode\SwytchFramework\Template\dangerous;
+
 class Variables implements EscaperInterface {
 	public const LEFT = '{';
 	public const RIGHT = '}';
@@ -14,10 +16,10 @@ class Variables implements EscaperInterface {
 	private array $blobs = [];
 
 
-	public function makeBlobs(string $html): string
+	private function createBlobWithBoundaries(string $html, string $left, string $right): string
 	{
-		$html = str_replace(self::LEFT . self::RIGHT, '', $html);
-		$next = strtok($html, self::LEFT);
+		$html = str_replace($left . $right, '', $html);
+		$next = strtok($html, $left);
 		if($next === $html || $next === false) {
 			return $html;
 		}
@@ -25,19 +27,26 @@ class Variables implements EscaperInterface {
 		$future = $next;
 
 		while(true) {
-			$blob = strtok(self::RIGHT);
+			$blob = strtok($right);
 			if($blob === false) {
 				return $future;
 			}
 			$key = '__BLOB__' . count($this->blobs) . '__';
 			$this->blobs[$key] = $blob;
 			$future .= $key;
-			$next = strtok(self::LEFT);
+			$next = strtok($left);
 			$future .= $next;
 			if($next === false) {
 				return $future;
 			}
 		}
+	}
+
+	public function makeBlobs(string $html): string
+	{
+		$boundaries = substr(dangerous(''), 0, 8);
+		$html = $this->createBlobWithBoundaries($html, $boundaries, $boundaries);
+		return $this->createBlobWithBoundaries($html, self::LEFT, self::RIGHT);
 	}
 
 	public function replaceBlobs(string $html, callable $processor): string
