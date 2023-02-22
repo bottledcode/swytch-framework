@@ -3,8 +3,6 @@
 namespace Bottledcode\SwytchFramework\Template\Traits;
 
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
-use Bottledcode\SwytchFramework\Template\CompiledComponent;
-use Bottledcode\SwytchFramework\Template\CompiledHtml;
 use Bottledcode\SwytchFramework\Template\Compiler;
 use Bottledcode\SwytchFramework\Template\Enum\HtmxSwap;
 use olvlvl\ComposerAttributeCollector\Attributes;
@@ -19,6 +17,16 @@ trait Htmx
 	{
 		$dom = $this->compiler->compile($html);
 		return $this->compiler->renderCompiledHtml($dom);
+	}
+
+	function dangerous(string $html): string
+	{
+		static $boundary = null;
+		if ($boundary === null) {
+			$boundary = "\0";
+		}
+
+		return $boundary . $html . $boundary;
 	}
 
 	/**
@@ -147,7 +155,9 @@ trait Htmx
 
 		header('hx-retarget: #' . $target_id);
 		header('hx-reswap: outerHTML');
-		$dom = $this->compiler->compile("$prependHtml\n<{$attribute->name} id='{{$target_id}}' {$state}></{$attribute->name}>");
+		$dom = $this->compiler->compile(
+			"$prependHtml\n<{$attribute->name} id='{{$target_id}}' {$state}></{$attribute->name}>"
+		);
 		return $this->compiler->renderCompiledHtml($dom);
 	}
 }
