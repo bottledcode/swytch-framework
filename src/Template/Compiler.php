@@ -33,12 +33,18 @@ final class Compiler
 			$this->refProvider = $this->container->get(RefProviderInterface::class);
 		} else {
 			$this->refProvider = new SimpleRefProvider();
+			if(method_exists($this->container, 'set')) {
+				$this->container->set(RefProviderInterface::class, $this->refProvider);
+			}
 		}
 
 		if($this->container->has(EscaperInterface::class)) {
 			$this->escaper = $this->container->get(EscaperInterface::class);
 		} else {
 			$this->escaper = new Variables();
+			if(method_exists($this->container, 'set')) {
+				$this->container->set(EscaperInterface::class, $this->escaper);
+			}
 		}
 	}
 
