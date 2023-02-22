@@ -26,7 +26,6 @@ class TreeBuilder extends DOMTreeBuilder
 		private ContainerInterface $container,
 	) {
 		parent::__construct($isFragment, $options);
-		$this->blobs = new \WeakMap();
 		$this->stateProvider = $this->container->get(StateProviderInterface::class);
 	}
 
