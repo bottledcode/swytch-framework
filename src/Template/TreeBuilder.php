@@ -113,7 +113,7 @@ class TreeBuilder extends DOMTreeBuilder
 
 			// check if the component should be rendered
 			$classAttr = Attributes::forClass($this->components[$name]);
-			foreach($classAttr as $attr) {
+			foreach($classAttr->classAttributes as $attr) {
 				if($attr instanceof Authenticated) {
 					$userAuthenticated = $this->authenticationService->isAuthenticated();
 					switch([$userAuthenticated, $attr->visible]) {
