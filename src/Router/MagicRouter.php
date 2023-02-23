@@ -145,7 +145,7 @@ class MagicRouter
 					if ($parameterName === 'state') {
 						$arguments['state'] = $this->stateProvider->unserializeState($state);
 					} else {
-						if ($parameter->getType() instanceof \ReflectionNamedType && $parameter->getType()->getName() === 'string') {
+						if ($parameter->getType() instanceof \ReflectionNamedType && in_array($parameter->getType()->getName(), ['string', 'array', 'int', 'float', 'bool'])) {
 							$name = $parameter->getName();
 							if($from = $parameter->getAttributes(From::class)) {
 								$name = $from[0]->newInstance()->name;
