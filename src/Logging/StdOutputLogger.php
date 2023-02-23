@@ -22,7 +22,7 @@ class StdOutputLogger extends AbstractProcessingHandler
 	public function __destruct()
 	{
 		if ($this->output !== false) {
-			fclose($this->output);
+			@fclose($this->output);
 		}
 		parent::__destruct();
 	}
@@ -30,7 +30,7 @@ class StdOutputLogger extends AbstractProcessingHandler
 	protected function write(LogRecord $record): void
 	{
 		if ($this->output !== false) {
-			fwrite($this->output, $record->formatted);
+			@fwrite($this->output, $record->formatted);
 		}
 	}
 }
