@@ -23,16 +23,20 @@ class TreeBuilder extends DOMTreeBuilder
 
 	private readonly StateProviderInterface $stateProvider;
 
+	private readonly AuthenticationServiceInterface $authenticationService;
+
 	public function __construct(
 		bool $isFragment,
 		array $options,
 		private array $components,
 		private Compiler $compiler,
 		private ContainerInterface $container,
-		private AuthenticationServiceInterface $authenticationService,
 	) {
 		parent::__construct($isFragment, $options);
 		$this->stateProvider = $this->container->get(StateProviderInterface::class);
+		if($this->container->has(AuthenticationServiceInterface::class)) {
+			$this->authenticationService = $this->container->get(AuthenticationServiceInterface::class);
+		}
 	}
 
 	public function startTag($name, $attributes = array(), $selfClosing = false)
