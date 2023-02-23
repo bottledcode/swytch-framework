@@ -132,9 +132,9 @@ class TreeBuilder extends DOMTreeBuilder
 						case [true, true]:
 						case [false, false]:
 							continue 2;
-							case [false, true]:
-							case [true, false]:
-								return $mode;
+						case [false, true]:
+						case [true, false]:
+							return $mode;
 					}
 				}
 			}
@@ -146,8 +146,6 @@ class TreeBuilder extends DOMTreeBuilder
 			$component = new CompiledComponent($this->components[$name], $this->container, $this->compiler);
 
 			$id = $attributes['id'] ?? 'id' . substr(md5(random_bytes(8) . time()), 0, 6);
-
-			self::$componentStack[] = new RenderedComponent($component, $attributes, $id);
 
 			if (!$skipHxProcessing) {
 				$current->setAttribute('id', $id);
@@ -161,8 +159,17 @@ class TreeBuilder extends DOMTreeBuilder
 			}
 
 			$blobber = $this->container->get(EscaperInterface::class);
-			$passedAttributes = array_intersect_key($attributes, $usedAttributes);
-			$passedAttributes = array_map(fn($value) => $blobber->replaceBlobs($value, $escaper->escapeHtmlAttr(...)), $passedAttributes);
+			// find parameters we are passing to the component
+			$passedAttributes = array_intersect_key($attributes, array_change_key_case($usedAttributes));
+
+			// get the correctly cased names
+			$nameMap = array_combine(array_keys(array_change_key_case($usedAttributes)), array_keys($usedAttributes));
+			$passedAttributes = array_combine(array_map(fn($key) => $nameMap[$key], array_keys($passedAttributes)), $passedAttributes);
+
+			// replace attributes with real values
+			$passedAttributes = array_map(fn($value) => $blobber->replaceBlobs($value, rawurldecode(...)), $passedAttributes);
+
+			self::$componentStack[] = new RenderedComponent($component, $passedAttributes, $id);
 
 			$content = $component->compile($passedAttributes);
 
