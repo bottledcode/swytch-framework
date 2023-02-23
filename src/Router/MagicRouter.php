@@ -73,7 +73,7 @@ class MagicRouter
 				// deterrmine if the user is authorized to access the route
 				foreach(Attributes::findTargetMethods(Authorized::class) as $target) {
 					if([$target->class, $target->name] === [$route->class, $route->name]) {
-						$authorized = $this->container->get(AuthenticationServiceInterface::class)->isAuthorized(...$target->attribute->roles);
+						$authorized = $this->container->get(AuthenticationServiceInterface::class)->isAuthorizedVia(...$target->attribute->roles);
 						if(!$authorized) {
 							throw new NotAuthorized();
 						}
