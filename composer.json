@@ -34,6 +34,9 @@
     "phpstan/phpstan": "^1.9",
     "pestphp/pest": "^1.22"
   },
+  "suggest": {
+    "monolog/monolog": "For logging"
+  },
   "replace": {
     "symfony/polyfill-php80": "*",
     "symfony/polyfill-ctype": "*",
