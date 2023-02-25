@@ -63,6 +63,7 @@ class TreeBuilder extends DOMTreeBuilder
 			foreach ($matches[1] as $match) {
 				$formAddress = $blobber->replaceBlobs($match, $escaper->escapeUrl(...));
 			}
+			var_dump($formAddress);
 			if ($formAddress !== null) {
 				// inject csrf token
 				$token = base64_encode(random_bytes(32));
