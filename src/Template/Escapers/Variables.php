@@ -29,6 +29,12 @@ class Variables implements EscaperInterface
 
 		while (true) {
 			$blob = strtok($right);
+			if($inners = substr_count($blob, $left)) {
+				// we are nesting and we are only interested in the outermost
+				for($i = 0; $i < $inners; $i++) {
+					$blob .= $right . strtok($right);
+				}
+			}
 			if ($blob === false) {
 				return $future;
 			}
