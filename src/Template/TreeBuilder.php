@@ -60,7 +60,6 @@ class TreeBuilder extends DOMTreeBuilder
 			/** @var EscaperInterface $blobber */
 			$blobber = $this->container->get(EscaperInterface::class);
 			$formAddress = $blobber->replaceBlobs($formAddress, $escaper->escapeUrl(...));
-			var_dump($formAddress);
 			if ($formAddress !== null) {
 				// inject csrf token
 				$token = base64_encode(random_bytes(32));
