@@ -53,7 +53,7 @@ class Variables implements EscaperInterface
 	{
 		foreach ($this->blobs as $key => $blob) {
 			if (str_contains($html, $key)) {
-				if (str_starts_with($key, '__BLOB__')) {
+				if (str_starts_with($key, '__BLOB__') && is_callable($processor)) {
 					$blob = $processor($blob);
 				}
 				$html = str_replace($key, $blob, $html);
