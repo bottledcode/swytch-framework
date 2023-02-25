@@ -139,7 +139,7 @@ trait Htmx
 			if ($attribute instanceof Component) {
 				$state = implode(
 					' ',
-					array_map(fn($key, $value) => "{$key}=\"{$value}\"", array_keys($withState), $withState)
+					array_map(fn($key, $value) => "{$key}=\"{{$value}}\"", array_keys($withState), $withState)
 				);
 				break;
 			}
