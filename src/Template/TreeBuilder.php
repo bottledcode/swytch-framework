@@ -58,9 +58,10 @@ class TreeBuilder extends DOMTreeBuilder
 		if ($name === 'form') {
 			$formAddress = $attributes['hx-post'] ?? $attributes['hx-put'] ?? $attributes['hx-delete'] ?? $attributes['hx-patch'] ?? '';
 			preg_match_all(Output::ESCAPE_SEQUENCE, $formAddress, $matches);
+			/** @var EscaperInterface $blobber */
+			$blobber = $this->container->get(EscaperInterface::class);
 			foreach ($matches[1] as $match) {
-				$match = trim($match, '{}');
-				$formAddress = str_replace("{{$match}}", $escaper->escapeUrl($match), $formAddress);
+				$formAddress = $blobber->replaceBlobs($formAddress, $escaper->escapeUrl(...));
 			}
 			if ($formAddress !== null) {
 				// inject csrf token
