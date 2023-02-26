@@ -1,60 +1,53 @@
 {
-  "name": "bottledcode/swytch-framework",
-  "description": "A high performance framework for microservices",
-  "type": "library",
-  "license": "MIT",
-  "autoload": {
-    "psr-4": {
-      "Bottledcode\\SwytchFramework\\": "src/"
-    }
-  },
   "authors": [
     {
       "name": "Robert Landers",
       "email": "landers.robert@gmail.com"
     }
   ],
-  "require": {
-    "php": ">=8.2",
-    "gettext/gettext": "^5.6",
-    "gettext/translator": "^1.1",
-    "psr/container": "2.0.2",
-    "ext-intl": "*",
-    "olvlvl/composer-attribute-collector": "^1.1",
-    "masterminds/html5": "^2.7",
-    "ext-dom": "*",
-    "ext-mbstring": "*",
-    "laminas/laminas-escaper": "^2.12",
-    "symfony/serializer": "^6.2",
-    "symfony/property-access": "^6.2",
-    "ext-sodium": "*"
-  },
-  "require-dev": {
-    "roave/security-advisories": "dev-latest",
-    "phpstan/phpstan": "^1.9",
-    "pestphp/pest": "^1.22"
-  },
-  "suggest": {
-    "monolog/monolog": "For logging"
-  },
-  "replace": {
-    "symfony/polyfill-php80": "*",
-    "symfony/polyfill-ctype": "*",
-    "symfony/polyfill-intl-grapheme": "*",
-    "symfony/polyfill-intl-normalizer": "*",
-    "symfony/polyfill-mbstring": "*"
-  },
-  "repositories": [
-    {
-      "type": "vcs",
-      "branch": "master",
-      "url": "git@github.com:bottledcode/php-rql.git"
+  "autoload": {
+    "psr-4": {
+      "Bottledcode\\SwytchFramework\\": "src/"
     }
-  ],
+  },
   "config": {
     "allow-plugins": {
       "olvlvl/composer-attribute-collector": true,
       "pestphp/pest-plugin": true
     }
-  }
+  },
+  "description": "A PHP framework for building web applications",
+  "license": "MIT",
+  "name": "bottledcode/swytch-framework",
+  "replace": {
+    "symfony/polyfill-ctype": "*",
+    "symfony/polyfill-intl-grapheme": "*",
+    "symfony/polyfill-intl-normalizer": "*",
+    "symfony/polyfill-mbstring": "*",
+    "symfony/polyfill-php80": "*"
+  },
+  "require": {
+    "ext-dom": "*",
+    "ext-intl": "*",
+    "ext-mbstring": "*",
+    "ext-sodium": "*",
+    "gettext/gettext": "^5.6",
+    "gettext/translator": "^1.1",
+    "laminas/laminas-escaper": "^2.12",
+    "masterminds/html5": "^2.7",
+    "olvlvl/composer-attribute-collector": "^1.1",
+    "php": ">=8.2",
+    "psr/container": "2.0.2"
+  },
+  "require-dev": {
+    "pestphp/pest": "^1.22",
+    "phpstan/phpstan": "^1.9",
+    "roave/security-advisories": "dev-latest"
+  },
+  "suggest": {
+    "monolog/monolog": "For logging",
+    "php-di/php-di": "For dependency injection",
+    "symfony/serializer": "For state validation"
+  },
+  "type": "library"
 }
