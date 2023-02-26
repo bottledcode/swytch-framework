@@ -4,8 +4,6 @@ namespace Bottledcode\SwytchFramework\Template\Escapers;
 
 use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
 
-use function Bottledcode\SwytchFramework\Template\dangerous;
-
 class Variables implements EscaperInterface
 {
 	public const LEFT = '{';
@@ -16,6 +14,17 @@ class Variables implements EscaperInterface
 	 */
 	private array $blobs = [];
 
+	public function makeBlobs(string $html): string
+	{
+		$html = $this->createBlobWithBoundaries($html, "\0", "\0", 'DANG');
+		$html = str_replace([self::LEFT.self::LEFT.self::LEFT, self::LEFT.self::LEFT, self::RIGHT.self::RIGHT], ["{\0LEFT\0", "\0LEFT\0", "\0RIGHT\0"], $html);
+		$html = $this->createBlobWithBoundaries($html, self::LEFT, self::RIGHT, 'BLOB');
+		return $html;
+	}
+
+	public static function escape(string $string): string {
+		return str_replace(['{', '}'], ['{{', '}}'], $string);
+	}
 
 	protected function createBlobWithBoundaries(string $html, string $left, string $right, string $type): string
 	{
@@ -29,12 +38,6 @@ class Variables implements EscaperInterface
 
 		while (true) {
 			$blob = strtok($right);
-			if($inners = substr_count($blob, $left)) {
-				// we are nesting and we are only interested in the outermost
-				for($i = 0; $i < $inners; $i++) {
-					$blob .= $right . strtok($right);
-				}
-			}
 			if ($blob === false) {
 				return $future;
 			}
@@ -49,17 +52,6 @@ class Variables implements EscaperInterface
 		}
 	}
 
-	public function makeBlobs(string $html): string
-	{
-		$html = $this->createBlobWithBoundaries($html, "\0", "\0", 'DANG');
-		if(substr_count($html, self::LEFT) === substr_count($html, self::RIGHT)) {
-			return $this->createBlobWithBoundaries($html, self::LEFT, self::RIGHT, 'BLOB');
-		}
-		// we have an unbalanced number of left and right braces
-		// so, we simply cannot parse this sequence
-		throw new \RuntimeException('Unsanitized input detected');
-	}
-
 	public function replaceBlobs(string $html, callable $processor): string
 	{
 		foreach ($this->blobs as $key => $blob) {
@@ -70,6 +62,8 @@ class Variables implements EscaperInterface
 				$html = str_replace($key, $blob, $html);
 			}
 		}
+
+		$html = str_replace(["\0LEFT\0", "\0RIGHT\0"], [self::LEFT, self::RIGHT], $html);
 
 		return $html;
 	}

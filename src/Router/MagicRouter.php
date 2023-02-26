@@ -38,7 +38,7 @@ class MagicRouter
 			if(is_array($value)) {
 				$value = $this->sanitize($value);
 			} elseif(is_string($value)) {
-				$value = str_replace(['{', '}'], ['&#123;', '&#125;'], $value);
+				$value = str_replace(['{', '}'], ['{{', '}}'], $value);
 			}
 		}
 		return $values;
@@ -46,7 +46,7 @@ class MagicRouter
 
 	public function go(): string|null
 	{
-		$currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+		$currentPath = (string)parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 		$compiler = $this->container->get(Compiler::class);
 		array_map(static fn(TargetClass $class) => $compiler->registerComponent($class),
 			Attributes::findTargetClasses(Component::class));
