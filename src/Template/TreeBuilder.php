@@ -4,6 +4,7 @@ namespace Bottledcode\SwytchFramework\Template;
 
 use Bottledcode\SwytchFramework\Template\Attributes\Authenticated;
 use Bottledcode\SwytchFramework\Template\Attributes\Authorized;
+use Bottledcode\SwytchFramework\Template\Escapers\Variables;
 use Bottledcode\SwytchFramework\Template\Interfaces\AuthenticationServiceInterface;
 use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
 use Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface;
@@ -165,7 +166,7 @@ class TreeBuilder extends DOMTreeBuilder
 			$passedAttributes = array_combine(array_map(fn($key) => $nameMap[$key], array_keys($passedAttributes)), $passedAttributes);
 
 			// replace attributes with real values
-			$passedAttributes = array_map(fn($value) => $blobber->replaceBlobs($value, rawurldecode(...)), $passedAttributes);
+			$passedAttributes = array_map(fn($value) => $blobber->replaceBlobs($value, Variables::escape(...)), $passedAttributes);
 
 			self::$componentStack[] = new RenderedComponent($component, $passedAttributes, $id);
 
