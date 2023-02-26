@@ -10,10 +10,16 @@
       "Bottledcode\\SwytchFramework\\": "src/"
     }
   },
+  "autoload-dev": {
+    "psr-4": {
+      "Bottledcode\\SwytchFramework\\Tests\\": "tests/"
+    }
+  },
   "config": {
     "allow-plugins": {
       "olvlvl/composer-attribute-collector": true,
-      "pestphp/pest-plugin": true
+      "pestphp/pest-plugin": true,
+      "infection/extension-installer": true
     }
   },
   "description": "A PHP framework for building web applications",
@@ -40,9 +46,12 @@
     "psr/container": "2.0.2"
   },
   "require-dev": {
+    "infection/infection": "^0.26.19",
     "pestphp/pest": "^1.22",
+    "pestphp/pest-plugin-mock": "^1.0",
     "phpstan/phpstan": "^1.9",
-    "roave/security-advisories": "dev-latest"
+    "roave/security-advisories": "dev-latest",
+    "spatie/pest-plugin-snapshots": "^1.1"
   },
   "suggest": {
     "monolog/monolog": "For logging",
