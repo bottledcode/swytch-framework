@@ -141,7 +141,7 @@ trait Htmx
 				$state = implode(
 					' ',
 					array_map(
-						fn($key, $value) => "{$key}=\"{" . Variables::escape($value) . "}\"",
+						fn($key, $value) => "{$key}=\"{{$value}}\"",
 						array_keys($withState),
 						$withState
 					)
