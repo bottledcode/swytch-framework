@@ -33,6 +33,17 @@ class MagicRouter
 		return $this;
 	}
 
+	private function sanitize(array $values): array {
+		foreach($values as &$value) {
+			if(is_array($value)) {
+				$value = $this->sanitize($value);
+			} elseif(is_string($value)) {
+				$value = str_replace(['{', '}'], ['{{', '}}'], $value);
+			}
+		}
+		return $values;
+	}
+
 	public function go(): string|null
 	{
 		$currentPath = (string)parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
@@ -69,21 +80,102 @@ class MagicRouter
 						}
 					}
 				}
-				$this->deterrmineIfTheUserIsAuthorizedToAccessTheRoute($route);
 
-				list($payload, $state) = $this->extractStateAndPayload($currentMethod);
+				// deterrmine if the user is authorized to access the route
+				foreach(Attributes::findTargetMethods(Authorized::class) as $target) {
+					if([$target->class, $target->name] === [$route->class, $route->name]) {
+						$authorized = $this->container->get(AuthenticationServiceInterface::class)->isAuthorizedVia(...$target->attribute->roles);
+						if(!$authorized) {
+							throw new NotAuthorized();
+						}
+						break;
+					}
+				}
+
+				if ($currentMethod !== Method::GET) {
+					// determine if the payload is json or form data
+					$contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+					$payload = null;
+					if($contentType === 'application/json') {
+						$payload = json_decode(
+							file_get_contents('php://input') ?: '',
+							true,
+							flags: JSON_THROW_ON_ERROR
+						);
+					}
+					if($contentType === 'application/x-www-form-urlencoded' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+						$payload = $_POST;
+					}elseif($contentType === 'application/x-www-form-urlencoded') {
+						parse_str(file_get_contents('php://input'), $payload);
+					}
+					if ($payload === null) {
+						throw new InvalidRequest('Invalid content type: ' . $contentType);
+					}
+					// determine if the request is valid
+					$expectedToken = $_COOKIE['csrf_token'] ?? throw new InvalidRequest('Missing CSRF token');
+					$actualToken = $payload['csrf_token'] ?? throw new InvalidRequest('Missing CSRF token');
+					if (!hash_equals($expectedToken, $actualToken)) {
+						throw new InvalidRequest('Missing CSRF token');
+					}
+					unset($payload['csrf_token']);
+
+					// capture the state
+					$state = $payload['state'] ?? null;
+					$state_signature = $payload['state_hash'] ?? null;
+					if (empty($state_signature) && !empty($state)) {
+						throw new InvalidRequest('Invalid state');
+					}
+					if (!empty($state)) {
+						if(!$this->stateProvider->verifyState($state, $state_signature)) {
+							throw new InvalidRequest('Invalid state');
+						}
+						unset($payload['state_hash']);
+						unset($payload['state']);
+					}
+				} else {
+					$payload = [];
+				}
 
 				$payload = $this->sanitize(array_merge($payload, $pathArgs));
 
 				// everything looks correct (hopefully), so execute the route
-				$state = $this->runMiddleware($attribute, $state, $payload);
+				$middleware = array_map(
+					fn(string $middleware) => $this->container->get($middleware),
+					$this->middleware
+				);
+				foreach ($middleware as $m) {
+					$state = $m($attribute->path, $attribute->method, $state, $payload);
+				}
 
 				// look up the method on the component to see what it expects
 				$componentReflection = new \ReflectionClass($route->class);
 				$componentMethod = $componentReflection->getMethod($route->name);
 				$componentMethodParameters = $componentMethod->getParameters();
 
-				$arguments = $this->calculateArguments($componentMethodParameters, $state, $payload);
+				$arguments = [];
+				foreach ($componentMethodParameters as $parameter) {
+					$parameterName = $parameter->getName();
+					if ($parameterName === 'state') {
+						$arguments['state'] = $this->stateProvider->unserializeState($state);
+					} else {
+						if ($parameter->getType() instanceof \ReflectionNamedType && in_array($parameter->getType()->getName(), ['string', 'array', 'int', 'float', 'bool'])) {
+							$name = $parameter->getName();
+							if($from = $parameter->getAttributes(From::class)) {
+								$name = $from[0]->newInstance()->name;
+							}
+
+							$arguments[$parameter->getName()]
+								= $payload[$name] ?? throw new InvalidRequest('Missing parameter: ' . $parameter->getName());
+						} elseif (class_exists($parameter->getType()->getName())) {
+							/** @var Serializer $serializer */
+							$serializer = $this->container->get(Serializer::class);
+							$arguments[$parameter->getName()] = $serializer->denormalize(
+								$payload,
+								$parameter->getType()->getName()
+							);
+						}
+					}
+				}
 				$component = $this->container->get($route->class);
 				return $componentMethod->invokeArgs($component, $arguments);
 			}
@@ -95,158 +187,7 @@ class MagicRouter
 		return null;
 	}
 
-	/**
-	 * @param \olvlvl\ComposerAttributeCollector\TargetMethod $route
-	 * @return void
-	 * @throws NotAuthorized
-	 * @throws \Psr\Container\ContainerExceptionInterface
-	 * @throws \Psr\Container\NotFoundExceptionInterface
-	 */
-	public function deterrmineIfTheUserIsAuthorizedToAccessTheRoute(
-		\olvlvl\ComposerAttributeCollector\TargetMethod $route
-	): void {
-// deterrmine if the user is authorized to access the route
-		foreach (Attributes::findTargetMethods(Authorized::class) as $target) {
-			if ([$target->class, $target->name] === [$route->class, $route->name]) {
-				$authorized = $this->container->get(AuthenticationServiceInterface::class)->isAuthorizedVia(
-					...
-					$target->attribute->roles
-				);
-				if (!$authorized) {
-					throw new NotAuthorized();
-				}
-				break;
-			}
-		}
-	}
-
-	/**
-	 * @param mixed $currentMethod
-	 * @return array
-	 * @throws \JsonException
-	 */
-	public function extractStateAndPayload(mixed $currentMethod): array
-	{
-		$state = [];
-		if ($currentMethod !== Method::GET) {
-			// determine if the payload is json or form data
-			$contentType = $_SERVER['CONTENT_TYPE'] ?? '';
-			$payload = null;
-			if ($contentType === 'application/json') {
-				$payload = json_decode(
-					file_get_contents('php://input') ?: '',
-					true,
-					flags: JSON_THROW_ON_ERROR
-				);
-			}
-			if ($contentType === 'application/x-www-form-urlencoded' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-				$payload = $_POST;
-			} elseif ($contentType === 'application/x-www-form-urlencoded') {
-				parse_str(file_get_contents('php://input'), $payload);
-			}
-			if ($payload === null) {
-				throw new InvalidRequest('Invalid content type: ' . $contentType);
-			}
-			// determine if the request is valid
-			$expectedToken = $_COOKIE['csrf_token'] ?? throw new InvalidRequest('Missing CSRF token');
-			$actualToken = $payload['csrf_token'] ?? throw new InvalidRequest('Missing CSRF token');
-			if (!hash_equals($expectedToken, $actualToken)) {
-				throw new InvalidRequest('Missing CSRF token');
-			}
-			unset($payload['csrf_token']);
-
-			// capture the state
-			$state = $payload['state'] ?? null;
-			$state_signature = $payload['state_hash'] ?? null;
-			if (empty($state_signature) && !empty($state)) {
-				throw new InvalidRequest('Invalid state');
-			}
-			if (!empty($state)) {
-				if (!$this->stateProvider->verifyState($state, $state_signature)) {
-					throw new InvalidRequest('Invalid state');
-				}
-				unset($payload['state_hash']);
-				unset($payload['state']);
-			}
-		} else {
-			$payload = [];
-		}
-		return array($payload, $state);
-	}
-
-	private function sanitize(array $values): array
-	{
-		foreach ($values as &$value) {
-			if (is_array($value)) {
-				$value = $this->sanitize($value);
-			} elseif (is_string($value)) {
-				$value = str_replace(['{', '}'], ['{{', '}}'], $value);
-			}
-		}
-		return $values;
-	}
-
-	/**
-	 * @param Route $attribute
-	 * @param mixed $state
-	 * @param array $payload
-	 * @return mixed
-	 * @throws \Psr\Container\ContainerExceptionInterface
-	 * @throws \Psr\Container\NotFoundExceptionInterface
-	 */
-	public function runMiddleware(Route $attribute, mixed $state, array $payload): mixed
-	{
-		$middleware = array_map(
-			fn(string $middleware) => $this->container->get($middleware),
-			$this->middleware
-		);
-		foreach ($middleware as $m) {
-			$state = $m($attribute->path, $attribute->method, $state, $payload);
-		}
-		return $state;
-	}
-
-	/**
-	 * @param array $componentMethodParameters
-	 * @param mixed $state
-	 * @param array $payload
-	 * @return array
-	 * @throws \Psr\Container\ContainerExceptionInterface
-	 * @throws \Psr\Container\NotFoundExceptionInterface
-	 */
-	public function calculateArguments(array $componentMethodParameters, mixed $state, array $payload): array
-	{
-		$arguments = [];
-		foreach ($componentMethodParameters as $parameter) {
-			$parameterName = $parameter->getName();
-			if ($parameterName === 'state') {
-				$arguments['state'] = $this->stateProvider->unserializeState($state);
-			} else {
-				if ($parameter->getType() instanceof \ReflectionNamedType && in_array(
-						$parameter->getType()->getName(),
-						['string', 'array', 'int', 'float', 'bool']
-					)) {
-					$name = $parameter->getName();
-
-					// todo: allow renaming here
-
-					$arguments[$parameter->getName()]
-						= $payload[$name] ?? throw new InvalidRequest('Missing parameter: ' . $parameter->getName());
-				} elseif (class_exists($parameter->getType()->getName())) {
-					/** @var Serializer $serializer */
-					$serializer = $this->container->get(Serializer::class);
-					$arguments[$parameter->getName()] = $serializer->denormalize(
-						$payload,
-						$parameter->getType()->getName()
-					);
-				}
-			}
-		}
-		return $arguments;
-	}
-
-	private function sanitizeName(string $name): string
-	{
+	private function sanitizeName(string $name): string {
 		return preg_replace('/[^a-z0-9_]/i', '_', $name);
 	}
 }
