@@ -24,25 +24,6 @@
 |
 */
 
-$container = new class implements Psr\Container\ContainerInterface {
-	public array $values = [];
-
-	public function get(string $id)
-	{
-		return $this->values[$id] ?? new $id();
-	}
-
-	public function has(string $id): bool
-	{
-		return false;
-	}
-
-	public function set(string $id, $value)
-	{
-		$this->values[$id] = $value;
-	}
-};
-
 expect()->extend('toBeOne', function () {
 	return $this->toBe(1);
 });
@@ -68,7 +49,6 @@ expect()->extend('toOutput', function ($expectedFile) {
 |
 */
 
-function something()
-{
-	// ..
+function getContainer(): \Psr\Container\ContainerInterface {
+
 }
