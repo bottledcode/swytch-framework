@@ -25,13 +25,6 @@
   "description": "A PHP framework for building web applications",
   "license": "MIT",
   "name": "bottledcode/swytch-framework",
-  "replace": {
-    "symfony/polyfill-ctype": "*",
-    "symfony/polyfill-intl-grapheme": "*",
-    "symfony/polyfill-intl-normalizer": "*",
-    "symfony/polyfill-mbstring": "*",
-    "symfony/polyfill-php80": "*"
-  },
   "require": {
     "ext-dom": "*",
     "ext-intl": "*",
@@ -49,6 +42,7 @@
     "infection/infection": "^0.26.19",
     "pestphp/pest": "^1.22",
     "pestphp/pest-plugin-mock": "^1.0",
+    "php-di/php-di": "^7.0",
     "phpstan/phpstan": "^1.9",
     "roave/security-advisories": "dev-latest",
     "spatie/pest-plugin-snapshots": "^1.1"

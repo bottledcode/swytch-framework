@@ -1,13 +1,18 @@
 <?php
 
+namespace Bottledcode\SwytchFramework\Tests\SimpleApp;
+
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
-use Bottledcode\SwytchFramework\Template\Traits\FancyClasses;
 
-#[Component('TodoItem')]
-class TodoItem {
-	public function __construct() {}
+#[Component('SimpleAppTodoItem')]
+class TodoItem
+{
+	public function __construct()
+	{
+	}
 
-	public function render(array $stuff) {
+	public function render(array $stuff)
+	{
 		return <<<HTML
 <hi>{{$stuff['name']}}</hi>
 <form hx-post="/test">

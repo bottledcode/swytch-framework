@@ -1,10 +1,12 @@
 <?php
 
-use Bottledcode\SwytchFramework\Template\Attributes\Component;
-use Bottledcode\SwytchFramework\Template\ComponentInterface;
+namespace Bottledcode\SwytchFramework\Tests\SimpleApp;
 
-#[Component('Index')]
-class Index {
+use Bottledcode\SwytchFramework\Template\Attributes\Component;
+
+#[Component('SimpleAppIndex')]
+class Index
+{
 	public function render(): string
 	{
 		$language = $props['language'] ?? 'en';
@@ -17,7 +19,7 @@ class Index {
 <title>{{$title}}</title>
 </head>
 <body>
-<app name="{{$name}}" />
+<TestApp id="app" name="{{$name}}" />
 </body>
 </html>
 HTML;

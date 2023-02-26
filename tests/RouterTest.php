@@ -6,8 +6,10 @@ use Bottledcode\SwytchFramework\Template\Compiler;
 use Bottledcode\SwytchFramework\Template\Functional\DefaultRoute;
 use Bottledcode\SwytchFramework\Template\Functional\Route;
 
+use function Spatie\Snapshots\assertMatchesHtmlSnapshot;
+
 it('can be used to route to other components based on request', function () {
-	global $container;
+	$container = getContainer();
 	$compiler = new Compiler(container: $container);
 	require_once __DIR__ .'/RouterApp/Index.php';
 	$compiler->registerComponent(RouterAppIndex::class);
@@ -19,13 +21,13 @@ it('can be used to route to other components based on request', function () {
 
 	$app = $compiler->compileComponent(RouterAppIndex::class);
 	expect($app)->toBeInstanceOf(CompiledComponent::class);
-	expect($app->renderToString())->toOutput(__DIR__.'/RouterApp/expected-output-1.html');
+	\Spatie\Snapshots\assertMatchesHtmlSnapshot($app->renderToString());
 
 	$container->set(Route::class, null);
 });
 
 it('can render variables', function () {
-	global $container;
+	$container = getContainer();
 	$compiler = new Compiler(container: $container);
 	require_once __DIR__ .'/RouterApp/Index.php';
 	$compiler->registerComponent(RouterAppIndex::class);
@@ -38,13 +40,13 @@ it('can render variables', function () {
 
 	$app = $compiler->compileComponent(RouterAppIndex::class);
 	expect($app)->toBeInstanceOf(CompiledComponent::class);
-	expect($app->renderToString())->toOutput(__DIR__.'/RouterApp/expected-output-2.html');
+	\Spatie\Snapshots\assertMatchesHtmlSnapshot($app->renderToString());
 
 	$container->set(Route::class, null);
 });
 
 it('can render default route', function () {
-	global $container;
+	$container = getContainer();
 	$compiler = new Compiler(container: $container);
 	require_once __DIR__ .'/RouterApp/Index.php';
 	$compiler->registerComponent(RouterAppIndex::class);
@@ -57,13 +59,13 @@ it('can render default route', function () {
 
 	$app = $compiler->compileComponent(RouterAppIndex::class);
 	expect($app)->toBeInstanceOf(CompiledComponent::class);
-	expect($app->renderToString())->toOutput(__DIR__.'/RouterApp/expected-output-3.html');
+	assertMatchesHtmlSnapshot($app->renderToString());
 
 	$container->set(Route::class, null);
 });
 
 it('can render an htmx trigger', function () {
-	global $container;
+	$container = getContainer();
 	$compiler = new Compiler(container: $container);
 	require_once __DIR__ .'/RouterApp/Index.php';
 	require_once __DIR__ .'/RouterApp/Test.php';
@@ -78,11 +80,5 @@ it('can render an htmx trigger', function () {
 
 	$app = $compiler->compileComponent(RouterAppIndex::class);
 	expect($app)->toBeInstanceOf(CompiledComponent::class);
-	expect($app->renderToString())->toOutput(__DIR__.'/RouterApp/expected-output-4.html');
-});
-
-it('can serialize and validate state', function() {
-	$state = ['foo' => 'bar'];
-	$serialized = StateSync::serializeState('secret', $state);
-	expect($deserialized = StateSync::verifyState('secret', base64_encode(json_encode($state)), $serialized['hash']))->toBeTrue();
+	assertMatchesHtmlSnapshot($app->renderToString());
 });

@@ -24,6 +24,10 @@
 |
 */
 
+use Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface;
+use Bottledcode\SwytchFramework\Template\ReferenceImplementation\UnvalidatedStateProvider;
+use Symfony\Component\Serializer\Serializer;
+
 expect()->extend('toBeOne', function () {
 	return $this->toBe(1);
 });
@@ -49,6 +53,13 @@ expect()->extend('toOutput', function ($expectedFile) {
 |
 */
 
-function getContainer(): \Psr\Container\ContainerInterface {
-
+function getContainer(array $definitionOverride = []): \DI\Container
+{
+	$builder = new \DI\ContainerBuilder();
+	$builder->addDefinitions(
+		array_merge([
+			StateProviderInterface::class => fn() => new UnvalidatedStateProvider()
+		], $definitionOverride)
+	);
+	return $builder->build();
 }

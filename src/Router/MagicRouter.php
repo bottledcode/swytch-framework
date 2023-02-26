@@ -103,7 +103,9 @@ class MagicRouter
 							flags: JSON_THROW_ON_ERROR
 						);
 					}
-					if($contentType === 'application/x-www-form-urlencoded') {
+					if($contentType === 'application/x-www-form-urlencoded' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+						$payload = $_POST;
+					}elseif($contentType === 'application/x-www-form-urlencoded') {
 						parse_str(file_get_contents('php://input'), $payload);
 					}
 					if ($payload === null) {
