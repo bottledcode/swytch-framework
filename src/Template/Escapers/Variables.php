@@ -14,24 +14,28 @@ class Variables implements EscaperInterface
 	 */
 	private array $blobs = [];
 
+	public static function escape(string $string): string
+	{
+		return str_replace(['{', '}'], ['{{', '}}'], $string);
+	}
+
 	public function makeBlobs(string $html): string
 	{
 		$html = $this->createBlobWithBoundaries($html, "\0", "\0", 'DANG');
-		$html = str_replace([self::LEFT.self::LEFT.self::LEFT, self::LEFT.self::LEFT, self::RIGHT.self::RIGHT], ["{\0LEFT\0", "\0LEFT\0", "\0RIGHT\0"], $html);
+		$html = str_replace([self::LEFT . self::LEFT . self::LEFT, self::LEFT . self::LEFT, self::RIGHT . self::RIGHT],
+			["{\0LEFT\0", "\0LEFT\0", "\0RIGHT\0"],
+			$html);
 		$html = $this->createBlobWithBoundaries($html, self::LEFT, self::RIGHT, 'BLOB');
 		return $html;
 	}
 
-	public static function escape(string $string): string {
-		return str_replace(['{', '}'], ['{{', '}}'], $string);
-	}
-
 	protected function createBlobWithBoundaries(string $html, string $left, string $right, string $type): string
 	{
+		$html = str_pad($html, strlen($html) + 2, " ", STR_PAD_BOTH);
 		$html = str_replace($left . $right, '', $html);
 		$next = strtok($html, $left);
 		if ($next === $html || $next === false) {
-			return $html;
+			return substr($html, 1, -1);
 		}
 
 		$future = $next;
@@ -39,7 +43,7 @@ class Variables implements EscaperInterface
 		while (true) {
 			$blob = strtok($right);
 			if ($blob === false) {
-				return $future;
+				return substr($future, 1, -1);
 			}
 			$key = '__' . $type . '__' . count($this->blobs) . '__';
 			$this->blobs[$key] = $blob;
@@ -47,7 +51,7 @@ class Variables implements EscaperInterface
 			$next = strtok($left);
 			$future .= $next;
 			if ($next === false) {
-				return $future;
+				return substr($future, 1, -1);
 			}
 		}
 	}

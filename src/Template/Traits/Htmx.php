@@ -5,6 +5,7 @@ namespace Bottledcode\SwytchFramework\Template\Traits;
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
 use Bottledcode\SwytchFramework\Template\Compiler;
 use Bottledcode\SwytchFramework\Template\Enum\HtmxSwap;
+use Bottledcode\SwytchFramework\Template\Escapers\Variables;
 use olvlvl\ComposerAttributeCollector\Attributes;
 use Symfony\Component\Serializer\Serializer;
 
@@ -12,12 +13,6 @@ trait Htmx
 {
 	private readonly Serializer $serializer;
 	private readonly Compiler $compiler;
-
-	private function html(string $html): string
-	{
-		$dom = $this->compiler->compile($html);
-		return $this->compiler->renderCompiledHtml($dom);
-	}
 
 	function dangerous(string $html): string
 	{
@@ -27,6 +22,12 @@ trait Htmx
 		}
 
 		return $boundary . $html . $boundary;
+	}
+
+	private function html(string $html): string
+	{
+		$dom = $this->compiler->compile($html);
+		return $this->compiler->renderCompiledHtml($dom);
 	}
 
 	/**
@@ -139,7 +140,11 @@ trait Htmx
 			if ($attribute instanceof Component) {
 				$state = implode(
 					' ',
-					array_map(fn($key, $value) => "{$key}=\"{{$value}}\"", array_keys($withState), $withState)
+					array_map(
+						fn($key, $value) => "{$key}=\"{" . Variables::escape($value) . "}\"",
+						array_keys($withState),
+						$withState
+					)
 				);
 				break;
 			}
