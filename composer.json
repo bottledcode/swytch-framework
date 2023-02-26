@@ -27,7 +27,9 @@
     "laminas/laminas-escaper": "^2.12",
     "symfony/serializer": "^6.2",
     "symfony/property-access": "^6.2",
-    "ext-sodium": "*"
+    "ext-sodium": "*",
+    "nikic/php-parser": "^4.15",
+    "nette/php-generator": "^4.0"
   },
   "require-dev": {
     "roave/security-advisories": "dev-latest",

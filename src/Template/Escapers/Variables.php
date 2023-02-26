@@ -52,7 +52,12 @@ class Variables implements EscaperInterface
 	public function makeBlobs(string $html): string
 	{
 		$html = $this->createBlobWithBoundaries($html, "\0", "\0", 'DANG');
-		return $this->createBlobWithBoundaries($html, self::LEFT, self::RIGHT, 'BLOB');
+		if(substr_count($html, self::LEFT) === substr_count($html, self::RIGHT)) {
+			return $this->createBlobWithBoundaries($html, self::LEFT, self::RIGHT, 'BLOB');
+		}
+		// we have an unbalanced number of left and right braces
+		// so, we simply cannot parse this sequence
+		throw new \RuntimeException('Unsanitized input detected');
 	}
 
 	public function replaceBlobs(string $html, callable $processor): string

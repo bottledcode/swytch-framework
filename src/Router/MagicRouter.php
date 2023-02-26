@@ -33,6 +33,17 @@ class MagicRouter
 		return $this;
 	}
 
+	private function sanitize(array $values): array {
+		foreach($values as &$value) {
+			if(is_array($value)) {
+				$value = $this->sanitize($value);
+			} elseif(is_string($value)) {
+				$value = str_replace(['{', '}'], ['&#123;', '&#125;'], $value);
+			}
+		}
+		return $values;
+	}
+
 	public function go(): string|null
 	{
 		$currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
@@ -123,7 +134,7 @@ class MagicRouter
 					$payload = [];
 				}
 
-				$payload = array_merge($payload, $pathArgs);
+				$payload = $this->sanitize(array_merge($payload, $pathArgs));
 
 				// everything looks correct (hopefully), so execute the route
 				$middleware = array_map(
