@@ -49,9 +49,6 @@ readonly class CompiledComponent
 			$component->aboutToRender($attributes);
 		}
 
-		$attributes = array_map(static fn($attribute) => is_string($attribute) ? trim($attribute, '{}') : $attribute,
-			$attributes);
-
 		$attributes = array_map(
 			fn($attribute) => str_starts_with($attribute, '__REF__') ? $this->compiler->getRef($attribute) : $attribute,
 			$attributes
