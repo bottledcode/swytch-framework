@@ -85,6 +85,11 @@
       <path value="$PROJECT_DIR$/vendor/laravel/serializable-closure" />
       <path value="$PROJECT_DIR$/vendor/php-di/php-di" />
       <path value="$PROJECT_DIR$/vendor/php-di/invoker" />
+      <path value="$PROJECT_DIR$/vendor/monolog/monolog" />
+      <path value="$PROJECT_DIR$/vendor/symfony/polyfill-ctype" />
+      <path value="$PROJECT_DIR$/vendor/symfony/polyfill-intl-normalizer" />
+      <path value="$PROJECT_DIR$/vendor/symfony/polyfill-intl-grapheme" />
+      <path value="$PROJECT_DIR$/vendor/symfony/polyfill-mbstring" />
     </include_path>
   </component>
   <component name="PhpInterpreters">

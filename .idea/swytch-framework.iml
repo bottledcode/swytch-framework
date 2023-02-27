@@ -78,6 +78,11 @@
       <excludeFolder url="file://$MODULE_DIR$/vendor/laravel/serializable-closure" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/php-di/php-di" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/php-di/invoker" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/monolog/monolog" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/symfony/polyfill-ctype" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/symfony/polyfill-intl-normalizer" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/symfony/polyfill-intl-grapheme" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/symfony/polyfill-mbstring" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
