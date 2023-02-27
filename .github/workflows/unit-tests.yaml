@@ -1,0 +1,26 @@
+name: Unit Tests
+on:
+  push:
+    branches: [ "main" ]
+  merge_group:
+  pull_request:
+    branches:
+      - main
+jobs:
+  tests:
+    name: Run Unit Tests
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@aa1fe473f9c687b6fb896056d771232c0bc41161
+        with:
+          coverage: none
+          tools: composer
+          php-version: 8.2
+          extensions: mbstring xdebug dom
+
+      - name: Install Dependencies
+        run: composer install --o
