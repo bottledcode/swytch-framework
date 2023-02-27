@@ -15,11 +15,13 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@aa1fe473f9c687b6fb896056d771232c0bc41161
+        uses: shivammathur/setup-php@v2
+        env:
+          runner: self-hosted
         with:
-          coverage: none
+          coverage: xdebug
           tools: composer
-          php-version: 8.2
+          php-version: '8.2'
           extensions: mbstring xdebug dom
 
       - name: Install Dependencies
