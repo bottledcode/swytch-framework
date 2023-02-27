@@ -25,4 +25,4 @@ jobs:
           extensions: mbstring xdebug dom
 
       - name: Install Dependencies
-        run: composer install --o
+        run: composer install --optimize-autoloader
