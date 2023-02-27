@@ -17,6 +17,9 @@
                   <Item>
                     <option name="path" value=".github/workflows/unit-tests.yaml" />
                   </Item>
+                  <Item>
+                    <option name="path" value=".github/workflows/cd.yaml" />
+                  </Item>
                 </list>
               </option>
             </SchemaInfo>
