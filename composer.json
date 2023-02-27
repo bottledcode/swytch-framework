@@ -40,6 +40,7 @@
   },
   "require-dev": {
     "infection/infection": "^0.26.19",
+    "monolog/monolog": "^3.3",
     "pestphp/pest": "^1.22",
     "pestphp/pest-plugin-mock": "^1.0",
     "php-di/php-di": "^7.0",
