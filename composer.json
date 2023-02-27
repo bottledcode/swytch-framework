@@ -46,7 +46,8 @@
     "php-di/php-di": "^7.0",
     "phpstan/phpstan": "^1.9",
     "roave/security-advisories": "dev-latest",
-    "spatie/pest-plugin-snapshots": "^1.1"
+    "spatie/pest-plugin-snapshots": "^1.1",
+    "pestphp/pest-plugin-parallel": "^1.2"
   },
   "suggest": {
     "monolog/monolog": "For logging",

@@ -90,6 +90,9 @@
       <path value="$PROJECT_DIR$/vendor/symfony/polyfill-intl-normalizer" />
       <path value="$PROJECT_DIR$/vendor/symfony/polyfill-intl-grapheme" />
       <path value="$PROJECT_DIR$/vendor/symfony/polyfill-mbstring" />
+      <path value="$PROJECT_DIR$/vendor/jean85/pretty-package-versions" />
+      <path value="$PROJECT_DIR$/vendor/pestphp/pest-plugin-parallel" />
+      <path value="$PROJECT_DIR$/vendor/brianium/paratest" />
     </include_path>
   </component>
   <component name="PhpInterpreters">

@@ -28,7 +28,7 @@ jobs:
         run: composer install --optimize-autoloader
 
       - name: Run Unit Tests
-        run: vendor/bin/pest --coverage-clover coverage.xml
+        run: vendor/bin/pest --coverage-clover coverage.xml --ci
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
