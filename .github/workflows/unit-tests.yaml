@@ -28,4 +28,4 @@ jobs:
         run: composer install --optimize-autoloader
 
       - name: Run Unit Tests
-        run: vendor/bin/pest --coverage-xml=coverage.xml
+        run: vendor/bin/pest --coverage-clover coverage.xml
