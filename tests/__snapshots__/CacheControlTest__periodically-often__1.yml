@@ -1,0 +1,4 @@
+-
+    - 'Cache-Control: no-cache,private'
+-
+    - 'ETag: test'
