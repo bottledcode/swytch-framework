@@ -41,7 +41,7 @@ class App
 		protected array $dependencyInjection = [],
 		bool $registerErrorHandler = true
 	) {
-		if($registerErrorHandler) {
+		if ($registerErrorHandler) {
 			set_error_handler(function ($errno, $errstr, $errfile, $errline): bool {
 				if (!(error_reporting() & $errno)) {
 					// This error code is not included in error_reporting
@@ -63,11 +63,9 @@ class App
 
 	public function run(): void
 	{
-		if(!headers_sent()) {
-			header('Vary: Accept-Language, Accept-Encoding, Accept');
-			header('X-Frame-Options: DENY');
-			header('X-Content-Type-Options: nosniff');
-		}
+		$this->setHeader('Vary', 'Accept-Language, Accept-Encoding, Accept');
+		$this->setHeader('X-Frame-Options', 'DENY');
+		$this->setHeader('X-Content-Type-Options', 'nosniff');
 
 		$this->createContainer();
 
@@ -77,9 +75,7 @@ class App
 			 */
 			$language = $this->container->get(LanguageAcceptor::class);
 			$language->loadLanguage();
-			if(!headers_sent()) {
-				header('Content-Language: ' . $language->currentLanguage);
-			}
+			$this->setHeader('Content-Language', $language->currentLanguage);
 			$router = new MagicRouter($this->container, $this->indexClass);
 			$response = $router->go();
 
@@ -91,7 +87,7 @@ class App
 
 			if (!empty($cacheResult) && method_exists($cacheResult, 'render')) {
 				if ($this->debug) {
-					header('Cache-Tag-Rendered: ' . $cacheResult->tag);
+					$this->setHeader('Cache-Tag-Rendered', $cacheResult->tag);
 				}
 				$cacheResult->render($router->lastEtag);
 				if ($cacheResult->etagRequired && !empty($router->lastEtag)) {
@@ -110,6 +106,13 @@ class App
 		}
 
 		http_response_code(404);
+	}
+
+	protected function setHeader(string $name, string $value): void
+	{
+		if (!headers_sent()) {
+			header($name . ': ' . $value);
+		}
 	}
 
 	protected function createContainer(): ContainerInterface
