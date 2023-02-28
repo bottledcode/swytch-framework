@@ -6,7 +6,7 @@ use Gettext\Loader\MoLoader;
 use Gettext\Translator;
 use Gettext\TranslatorFunctions;
 
-abstract class LanguageAcceptor
+class LanguageAcceptor
 {
     public readonly string $currentLanguage;
 
@@ -14,7 +14,7 @@ abstract class LanguageAcceptor
      * @param string $locale
      * @param array<string> $supportedLocales
      */
-    public function __construct(string $locale, array $supportedLocales)
+    public function __construct(string $locale, array $supportedLocales, protected string $languageDir)
     {
         $detectedLocale = array_column(array_map(static fn($x) => explode(';', $x), explode(',', $locale)), 0);
         $this->currentLanguage = array_values(
@@ -24,8 +24,8 @@ abstract class LanguageAcceptor
 
     public function loadLanguage(): void
     {
-        if (file_exists($this->getLanguageDir() . $this->currentLanguage . '.mo')) {
-            $loader = (new MoLoader())->loadFile($this->getLanguageDir() . $this->currentLanguage . '.mo');
+        if (file_exists($this->languageDir . $this->currentLanguage . '.mo')) {
+            $loader = (new MoLoader())->loadFile($this->languageDir . $this->currentLanguage . '.mo');
             $translator = Translator::createFromTranslations($loader);
         } else {
             $translator = new Translator();
@@ -33,6 +33,4 @@ abstract class LanguageAcceptor
 
         TranslatorFunctions::register($translator);
     }
-
-    abstract protected function getLanguageDir(): string;
 }

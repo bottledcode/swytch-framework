@@ -20,6 +20,8 @@ class MagicRouter
 {
 	private array $middleware = [];
 
+	public string $lastEtag = '';
+
 	private readonly StateProviderInterface $stateProvider;
 
 	public function __construct(private ContainerInterface $container, private string $appRoot)
@@ -47,6 +49,9 @@ class MagicRouter
 	public function go(): string|null
 	{
 		$currentPath = (string)parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+		/**
+		 * @var Compiler $compiler
+		 */
 		$compiler = $this->container->get(Compiler::class);
 		array_map(static fn(TargetClass $class) => $compiler->registerComponent($class),
 			Attributes::findTargetClasses(Component::class));
@@ -177,11 +182,15 @@ class MagicRouter
 					}
 				}
 				$component = $this->container->get($route->class);
-				return $componentMethod->invokeArgs($component, $arguments);
+				$response = $componentMethod->invokeArgs($component, $arguments);
+				$this->lastEtag = md5($response);
+				return $response;
 			}
 		} else {
 			// handle web routes
-			return $compiler->compileComponent($this->appRoot)->renderToString();
+			$component = $compiler->compileComponent($this->appRoot);
+			$this->lastEtag = $component->etag ?? '';
+			return $component->renderToString();
 		}
 
 		return null;
