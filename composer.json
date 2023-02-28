@@ -37,7 +37,9 @@
     "olvlvl/composer-attribute-collector": "^1.1",
     "php": ">=8.2",
     "php-di/php-di": "^7.0",
-    "psr/container": "2.0.2"
+    "psr/container": "2.0.2",
+    "symfony/property-access": "^6.2",
+    "symfony/serializer": "^6.2"
   },
   "require-dev": {
     "infection/infection": "^0.26.19",
