@@ -38,31 +38,36 @@ class App
 	public function __construct(
 		protected bool $debug,
 		protected string $indexClass,
-		protected array $dependencyInjection = []
+		protected array $dependencyInjection = [],
+		bool $registerErrorHandler = true
 	) {
-		set_error_handler(function ($errno, $errstr, $errfile, $errline): bool {
-			if (!(error_reporting() & $errno)) {
-				// This error code is not included in error_reporting
-				$this->container?->get(LoggerInterface::class)->debug(
-					'Error suppressed',
+		if($registerErrorHandler) {
+			set_error_handler(function ($errno, $errstr, $errfile, $errline): bool {
+				if (!(error_reporting() & $errno)) {
+					// This error code is not included in error_reporting
+					$this->container?->get(LoggerInterface::class)->debug(
+						'Error suppressed',
+						compact('errno', 'errstr', 'errfile', 'errline')
+					);
+					return true;
+				}
+				http_response_code(500);
+				$this->container?->get(LoggerInterface::class)->critical(
+					'Fatal error',
 					compact('errno', 'errstr', 'errfile', 'errline')
 				);
-				return true;
-			}
-			http_response_code(500);
-			$this->container?->get(LoggerInterface::class)->critical(
-				'Fatal error',
-				compact('errno', 'errstr', 'errfile', 'errline')
-			);
-			die();
-		});
+				die();
+			});
+		}
 	}
 
 	public function run(): void
 	{
-		header('Vary: Accept-Language, Accept-Encoding, Accept');
-		header('X-Frame-Options: DENY');
-		header('X-Content-Type-Options: nosniff');
+		if(!headers_sent()) {
+			header('Vary: Accept-Language, Accept-Encoding, Accept');
+			header('X-Frame-Options: DENY');
+			header('X-Content-Type-Options: nosniff');
+		}
 
 		$this->createContainer();
 
@@ -72,7 +77,9 @@ class App
 			 */
 			$language = $this->container->get(LanguageAcceptor::class);
 			$language->loadLanguage();
-			header('Content-Language: ' . $language->currentLanguage);
+			if(!headers_sent()) {
+				header('Content-Language: ' . $language->currentLanguage);
+			}
 			$router = new MagicRouter($this->container, $this->indexClass);
 			$response = $router->go();
 
@@ -115,9 +122,9 @@ class App
 			'env.SWYTCH_DEFAULT_LANGUAGE' => fn() => getenv('SWYTCH_DEFAULT_LANGUAGE') ?: 'en',
 			'env.SWYTCH_SUPPORTED_LANGUAGES' => fn() => explode(',', getenv('SWYTCH_SUPPORTED_LANGUAGES') ?: 'en'),
 			'env.SWYTCH_LANGUAGE_DIR' => fn() => getenv('SWYTCH_LANGUAGE_DIR') ?: __DIR__ . '/Language',
-			'req.ACCEPT_LANGUAGE' => fn() => $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?: get('env.DEFAULT_LANGUAGE'),
+			'req.ACCEPT_LANGUAGE' => fn() => $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? get('env.DEFAULT_LANGUAGE'),
 			StateProviderInterface::class => create(ValidatedState::class)
-				->constructor(get('env.STATE_SECRET'), get(Serializer::class)),
+				->constructor(get('env.SWYTCH_STATE_SECRET'), get(Serializer::class)),
 			Serializer::class => create(Serializer::class)
 				->constructor([
 					get(ArrayDenormalizer::class),
