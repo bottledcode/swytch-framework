@@ -19,6 +19,19 @@ Features:
 > NOTE:
 > This is currently pre-production software and is not recommended for production use.
 
+## Example Apps
+
+If you find yourself here before the documentation is complete/released, you can check out these example apps to get an
+idea of what the framework is capable of and how it works.
+
+### [Swytch Todos](https://github.com/bottledcode/swytch-framework-todo-poc/tree/main)
+
+Check it out live on [todos.bottled.codes](https://todos.bottled.codes/). This is an implementation of TodoMVC.
+
+### Authentication
+
+This one isn't open source (yet) but you'll notice it on any of the example apps.
+
 ## Example Component
 
 ```php
