@@ -21,3 +21,8 @@ it('renders correctly', function () {
 	$compiled = $compiler->compileComponent(\Bottledcode\SwytchFramework\Tests\SimpleApp\Index::class);
 	\Spatie\Snapshots\assertMatchesHtmlSnapshot($compiled->renderToString());
 });
+
+it('fails when missing env vars', function() {
+	$app = new \Bottledcode\SwytchFramework\App(false, \Bottledcode\SwytchFramework\Tests\SimpleApp\App::class, registerErrorHandler: false);
+	expect($app->run(...))->toThrow(RuntimeException::class);
+});
