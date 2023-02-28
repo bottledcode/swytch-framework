@@ -7,11 +7,12 @@ use Bottledcode\SwytchFramework\Template\Functional\DefaultRoute;
 use Bottledcode\SwytchFramework\Template\Functional\Route;
 
 use function Spatie\Snapshots\assertMatchesHtmlSnapshot;
+use function Spatie\Snapshots\assertMatchesTextSnapshot;
 
 it('can be used to route to other components based on request', function () {
 	$container = getContainer();
 	$compiler = new Compiler(container: $container);
-	require_once __DIR__ .'/RouterApp/Index.php';
+	require_once __DIR__ . '/RouterApp/Index.php';
 	$compiler->registerComponent(RouterAppIndex::class);
 	$compiler->registerComponent(Route::class);
 	$compiler->registerComponent(DefaultRoute::class);
@@ -21,7 +22,8 @@ it('can be used to route to other components based on request', function () {
 
 	$app = $compiler->compileComponent(RouterAppIndex::class);
 	expect($app)->toBeInstanceOf(CompiledComponent::class);
-	\Spatie\Snapshots\assertMatchesHtmlSnapshot($app->renderToString());
+	assertMatchesHtmlSnapshot($app->renderToString());
+	assertMatchesTextSnapshot($app->etag);
 
 	$container->set(Route::class, null);
 });
@@ -29,7 +31,7 @@ it('can be used to route to other components based on request', function () {
 it('can render variables', function () {
 	$container = getContainer();
 	$compiler = new Compiler(container: $container);
-	require_once __DIR__ .'/RouterApp/Index.php';
+	require_once __DIR__ . '/RouterApp/Index.php';
 	$compiler->registerComponent(RouterAppIndex::class);
 	$compiler->registerComponent(Route::class);
 	$compiler->registerComponent(DefaultRoute::class);
@@ -40,7 +42,7 @@ it('can render variables', function () {
 
 	$app = $compiler->compileComponent(RouterAppIndex::class);
 	expect($app)->toBeInstanceOf(CompiledComponent::class);
-	\Spatie\Snapshots\assertMatchesHtmlSnapshot($app->renderToString());
+	assertMatchesHtmlSnapshot($app->renderToString());
 
 	$container->set(Route::class, null);
 });
@@ -48,7 +50,7 @@ it('can render variables', function () {
 it('can render default route', function () {
 	$container = getContainer();
 	$compiler = new Compiler(container: $container);
-	require_once __DIR__ .'/RouterApp/Index.php';
+	require_once __DIR__ . '/RouterApp/Index.php';
 	$compiler->registerComponent(RouterAppIndex::class);
 	$compiler->registerComponent(Route::class);
 	$compiler->registerComponent(DefaultRoute::class);
@@ -67,9 +69,15 @@ it('can render default route', function () {
 it('can render an htmx trigger', function () {
 	$container = getContainer();
 	$compiler = new Compiler(container: $container);
-	require_once __DIR__ .'/RouterApp/Index.php';
-	require_once __DIR__ .'/RouterApp/Test.php';
-	$container->set(\Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface::class, new \Bottledcode\SwytchFramework\Template\ReferenceImplementation\ValidatedState('123', $container->get(\Symfony\Component\Serializer\Serializer::class)));
+	require_once __DIR__ . '/RouterApp/Index.php';
+	require_once __DIR__ . '/RouterApp/Test.php';
+	$container->set(
+		\Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface::class,
+		new \Bottledcode\SwytchFramework\Template\ReferenceImplementation\ValidatedState(
+			'123',
+			$container->get(\Symfony\Component\Serializer\Serializer::class)
+		)
+	);
 	$compiler->registerComponent(RouterAppIndex::class);
 	$compiler->registerComponent(Route::class);
 	$compiler->registerComponent(DefaultRoute::class);

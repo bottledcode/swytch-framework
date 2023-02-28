@@ -27,7 +27,7 @@ readonly class CompiledComponent
 	{
 		$dom = $this->compile();
 		$this->generateEtag($dom);
-		return $this->compiler->renderCompiledHtml($this->compile());
+		return $this->compiler->renderCompiledHtml($dom);
 	}
 
 	private function generateEtag(\DOMDocument|\DOMDocumentFragment $dom): void {
@@ -38,7 +38,7 @@ readonly class CompiledComponent
 			$this->etag = md5($dom->textContent);
 		}
 		if($dom instanceof \DOMDocumentFragment) {
-			$this->etag = '';
+			$this->etag = md5($dom->textContent);
 		}
 	}
 
