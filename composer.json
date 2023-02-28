@@ -36,6 +36,7 @@
     "masterminds/html5": "^2.7",
     "olvlvl/composer-attribute-collector": "^1.1",
     "php": ">=8.2",
+    "php-di/php-di": "^7.0",
     "psr/container": "2.0.2"
   },
   "require-dev": {
@@ -43,7 +44,6 @@
     "monolog/monolog": "^3.3",
     "pestphp/pest": "^1.22",
     "pestphp/pest-plugin-mock": "^1.0",
-    "php-di/php-di": "^7.0",
     "phpstan/phpstan": "^1.9",
     "roave/security-advisories": "dev-latest",
     "spatie/pest-plugin-snapshots": "^1.1",

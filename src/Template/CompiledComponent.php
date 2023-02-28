@@ -9,6 +9,8 @@ use ReflectionClass;
 
 readonly class CompiledComponent
 {
+	public string $etag;
+
 	/**
 	 * @param class-string $component
 	 * @param ContainerInterface $container
@@ -23,7 +25,21 @@ readonly class CompiledComponent
 
 	public function renderToString(): string
 	{
+		$dom = $this->compile();
+		$this->generateEtag($dom);
 		return $this->compiler->renderCompiledHtml($this->compile());
+	}
+
+	private function generateEtag(\DOMDocument|\DOMDocumentFragment $dom): void {
+		if(isset($this->etag)) {
+			return;
+		}
+		if($dom instanceof \DOMDocument) {
+			$this->etag = md5($dom->textContent);
+		}
+		if($dom instanceof \DOMDocumentFragment) {
+			$this->etag = '';
+		}
 	}
 
 	public function getUsedAttributes(): array {
