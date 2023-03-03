@@ -33,7 +33,7 @@ readonly class CompiledComponent
 	public function compile(array $attributes = []): \DOMDocument|\DOMDocumentFragment
 	{
 		// we are about to render
-		$component = $this->container->get($this->component);
+		$component = $this->container->make($this->component);
 		if ($component instanceof BeforeRenderInterface) {
 			$component->aboutToRender($attributes);
 		}
