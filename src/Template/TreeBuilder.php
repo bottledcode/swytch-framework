@@ -186,7 +186,20 @@ class TreeBuilder extends DOMTreeBuilder
 					$component->renderedComponent,
 					'replaceTag'
 				) && $component->renderedComponent?->replaceTag()) {
-				$current->replaceWith($content);
+				$nodes = [];
+				$last = null;
+				foreach ($content->childNodes as $node) {
+					$nodes[] = $node;
+					if ($node instanceof \DOMElement || $node instanceof \DOMDocumentFragment) {
+						$last = $node;
+					}
+				}
+				if ($last === null) {
+					throw new \LogicException('No element found in component content.');
+				}
+				$this->current = $last;
+				$current->before(...$nodes);
+				$current->remove();
 			} elseif ($content->childElementCount > 0) {
 				$current->appendChild($content);
 			}
