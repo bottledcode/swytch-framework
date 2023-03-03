@@ -153,8 +153,14 @@ class TreeBuilder extends DOMTreeBuilder
 			$usedAttributes = $component->getUsedAttributes();
 
 			// we need to remove the attributes from the component
-			foreach (array_intersect_key($attributes, $usedAttributes) as $key => $value) {
-				$current->removeAttribute($key);
+			$removeAttributes = true;
+			if (method_exists($current, 'removePassedAttributes')) {
+				$removeAttributes = ($this->components[$name])::removePassedAttributes();
+			}
+			if ($removeAttributes) {
+				foreach (array_intersect_key($attributes, $usedAttributes) as $key => $value) {
+					$current->removeAttribute($key);
+				}
 			}
 
 			$blobber = $this->container->get(EscaperInterface::class);
