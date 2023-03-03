@@ -154,7 +154,7 @@ class TreeBuilder extends DOMTreeBuilder
 
 			// we need to remove the attributes from the component
 			$removeAttributes = true;
-			if (method_exists($current, 'removePassedAttributes')) {
+			if (method_exists($this->components[$name], 'removePassedAttributes')) {
 				$removeAttributes = ($this->components[$name])::removePassedAttributes();
 			}
 			if ($removeAttributes) {
