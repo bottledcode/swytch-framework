@@ -3,7 +3,7 @@
 namespace Bottledcode\SwytchFramework\Template;
 
 use Bottledcode\SwytchFramework\Template\Interfaces\BeforeRenderInterface;
-use Psr\Container\ContainerInterface;
+use DI\FactoryInterface;
 use ReflectionClass;
 
 readonly class CompiledComponent
@@ -13,12 +13,12 @@ readonly class CompiledComponent
 
 	/**
 	 * @param class-string $component
-	 * @param ContainerInterface $container
+	 * @param FactoryInterface $container
 	 * @param Compiler $compiler
 	 */
 	public function __construct(
 		public string $component,
-		private ContainerInterface $container,
+		private FactoryInterface $container,
 		private Compiler $compiler
 	) {
 	}
