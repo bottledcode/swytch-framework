@@ -187,9 +187,7 @@ class TreeBuilder extends DOMTreeBuilder
 					'replaceTag'
 				) && $component->renderedComponent?->replaceTag()) {
 				$current->replaceWith($content);
-			}
-
-			if ($content->childElementCount > 0) {
+			} elseif ($content->childElementCount > 0) {
 				$current->appendChild($content);
 			}
 
