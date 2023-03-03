@@ -35,7 +35,7 @@ class TreeBuilder extends DOMTreeBuilder
 	) {
 		parent::__construct($isFragment, $options);
 		$this->stateProvider = $this->container->get(StateProviderInterface::class);
-		if($this->container->has(AuthenticationServiceInterface::class)) {
+		if ($this->container->has(AuthenticationServiceInterface::class)) {
 			$this->authenticationService = $this->container->get(AuthenticationServiceInterface::class);
 		}
 	}
@@ -112,10 +112,10 @@ class TreeBuilder extends DOMTreeBuilder
 
 			// check if the component should be rendered
 			$classAttr = Attributes::forClass($this->components[$name]);
-			foreach($classAttr->classAttributes as $attr) {
-				if($attr instanceof Authenticated) {
+			foreach ($classAttr->classAttributes as $attr) {
+				if ($attr instanceof Authenticated) {
 					$userAuthenticated = $this->authenticationService->isAuthenticated();
-					switch([$userAuthenticated, $attr->visible]) {
+					switch ([$userAuthenticated, $attr->visible]) {
 						// set to visible and user is authenticated
 						case [true, true]:
 						case [false, false]:
@@ -125,9 +125,9 @@ class TreeBuilder extends DOMTreeBuilder
 							return $mode;
 					}
 				}
-				if($attr instanceof Authorized) {
+				if ($attr instanceof Authorized) {
 					$userAuthorized = $this->authenticationService->isAuthorizedVia(...$attr->roles);
-					switch([$userAuthorized, $attr->visible]) {
+					switch ([$userAuthorized, $attr->visible]) {
 						case [true, true]:
 						case [false, false]:
 							continue 2;
@@ -163,14 +163,25 @@ class TreeBuilder extends DOMTreeBuilder
 
 			// get the correctly cased names
 			$nameMap = array_combine(array_keys(array_change_key_case($usedAttributes)), array_keys($usedAttributes));
-			$passedAttributes = array_combine(array_map(fn($key) => $nameMap[$key], array_keys($passedAttributes)), $passedAttributes);
+			$passedAttributes = array_combine(
+				array_map(fn($key) => $nameMap[$key], array_keys($passedAttributes)),
+				$passedAttributes
+			);
 
 			// replace attributes with real values
-			$passedAttributes = array_map(fn($value) => $blobber->replaceBlobs($value, Variables::escape(...)), $passedAttributes);
+			$passedAttributes = array_map(fn($value) => $blobber->replaceBlobs($value, Variables::escape(...)),
+				$passedAttributes);
 
 			self::$componentStack[] = new RenderedComponent($component, $passedAttributes, $id);
 
 			$content = $component->compile($passedAttributes);
+
+			if (method_exists(
+					$component->renderedComponent,
+					'replaceTag'
+				) && $component->renderedComponent?->replaceTag()) {
+				$current->replaceWith($content);
+			}
 
 			if ($content->childElementCount > 0) {
 				$current->appendChild($content);

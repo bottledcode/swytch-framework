@@ -3,13 +3,13 @@
 namespace Bottledcode\SwytchFramework\Template;
 
 use Bottledcode\SwytchFramework\Template\Interfaces\BeforeRenderInterface;
-use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
 use Psr\Container\ContainerInterface;
 use ReflectionClass;
 
 readonly class CompiledComponent
 {
 	public string $etag;
+	public mixed $renderedComponent;
 
 	/**
 	 * @param class-string $component
@@ -30,33 +30,6 @@ readonly class CompiledComponent
 		return $this->compiler->renderCompiledHtml($dom);
 	}
 
-	private function generateEtag(\DOMDocument|\DOMDocumentFragment $dom): void {
-		if(isset($this->etag)) {
-			return;
-		}
-		if($dom instanceof \DOMDocument) {
-			$this->etag = md5($dom->textContent);
-		}
-		if($dom instanceof \DOMDocumentFragment) {
-			$this->etag = md5($dom->textContent);
-		}
-	}
-
-	public function getUsedAttributes(): array {
-		$attributes = [];
-		try {
-			$classReflection = new ReflectionClass($this->component);
-			$methodReflection = $classReflection->getMethod('render');
-			$parameterReflection = $methodReflection->getParameters();
-			foreach($parameterReflection as $parameter) {
-				$attributes[] = $parameter->getName();
-			}
-		} catch (\ReflectionException $e) {
-			throw new \RuntimeException("Component {$this->component} does not have a render method");
-		}
-		return array_flip($attributes);
-	}
-
 	public function compile(array $attributes = []): \DOMDocument|\DOMDocumentFragment
 	{
 		// we are about to render
@@ -73,6 +46,37 @@ readonly class CompiledComponent
 		// render the component
 		$rendered = $component->render(...$attributes);
 
+		$this->renderedComponent = $component;
+
 		return $this->compiler->compile($rendered);
+	}
+
+	private function generateEtag(\DOMDocument|\DOMDocumentFragment $dom): void
+	{
+		if (isset($this->etag)) {
+			return;
+		}
+		if ($dom instanceof \DOMDocument) {
+			$this->etag = md5($dom->textContent);
+		}
+		if ($dom instanceof \DOMDocumentFragment) {
+			$this->etag = md5($dom->textContent);
+		}
+	}
+
+	public function getUsedAttributes(): array
+	{
+		$attributes = [];
+		try {
+			$classReflection = new ReflectionClass($this->component);
+			$methodReflection = $classReflection->getMethod('render');
+			$parameterReflection = $methodReflection->getParameters();
+			foreach ($parameterReflection as $parameter) {
+				$attributes[] = $parameter->getName();
+			}
+		} catch (\ReflectionException $e) {
+			throw new \RuntimeException("Component {$this->component} does not have a render method");
+		}
+		return array_flip($attributes);
 	}
 }
