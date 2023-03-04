@@ -132,7 +132,7 @@ class App
 			'env.SWYTCH_DEFAULT_LANGUAGE' => fn() => getenv('SWYTCH_DEFAULT_LANGUAGE') ?: 'en',
 			'env.SWYTCH_SUPPORTED_LANGUAGES' => fn() => explode(',', getenv('SWYTCH_SUPPORTED_LANGUAGES') ?: 'en'),
 			'env.SWYTCH_LANGUAGE_DIR' => fn() => getenv('SWYTCH_LANGUAGE_DIR') ?: __DIR__ . '/Language',
-			'req.ACCEPT_LANGUAGE' => fn() => $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? get('env.DEFAULT_LANGUAGE'),
+			'req.ACCEPT_LANGUAGE' => fn(ContainerInterface $c) => $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? $c->get('env.DEFAULT_LANGUAGE'),
 			StateProviderInterface::class => create(ValidatedState::class)
 				->constructor(get('env.SWYTCH_STATE_SECRET'), get(Serializer::class)),
 			Serializer::class => create(Serializer::class)
