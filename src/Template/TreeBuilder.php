@@ -53,13 +53,7 @@ class TreeBuilder extends DOMTreeBuilder
 		$this->waitingFor = '';
 		$children = $this->current;
 		$this->current = $this->previousCurrent;
-		$toReplace = $this->document()->getElementsByTagName('children');
-		/**
-		 * @var \DOMElement $child
-		 */
-		foreach($toReplace->getIterator() as $child) {
-			$child->replaceWith($children->childNodes->getIterator());
-		}
+		end(self::$componentStack)->childList->replaceWith($children->childNodes);
 		$this->previousCurrent = null;
 		array_pop(self::$componentStack);
 	}
@@ -73,6 +67,10 @@ class TreeBuilder extends DOMTreeBuilder
 			// get the last input, hopefully.
 			// todo: make this better
 			$current = $this->current->lastChild;
+		}
+
+		if($name === 'children') {
+			end(self::$componentStack)->childList->children[] = $current;
 		}
 
 		/**
