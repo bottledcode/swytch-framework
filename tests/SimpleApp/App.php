@@ -14,7 +14,7 @@ class App {
 <div>
 Your name is {{$name}}.
 <todoItem id="stable"" />
-<blah:label for="stable">
+<blah:label id="labeltest" for="stable">
 This is a label
 </blah:label>
 </div>
