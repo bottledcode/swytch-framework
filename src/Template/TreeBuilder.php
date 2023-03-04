@@ -228,7 +228,11 @@ class TreeBuilder extends DOMTreeBuilder
 				$current->appendChild($content);
 			}
 
-			array_pop(self::$componentStack);
+			if(!$selfClosing) {
+				$this->collectChildren($name);
+			} else {
+				array_pop(self::$componentStack);
+			}
 		}
 		return $mode;
 	}
@@ -242,10 +246,23 @@ class TreeBuilder extends DOMTreeBuilder
 		);
 	}
 
+	public function endTag($name)
+	{
+		// todo: there must be a better way...
+		if($this->waitingFor === $name) {
+			$this->replaceChildren();
+		}
+
+		parent::endTag($name);
+	}
+
 	protected function autoclose($tagName)
 	{
 		$this->closed = $this->current;
 		$this->actuallyClosed = true;
+		if($this->waitingFor === $tagName) {
+			$this->replaceChildren();
+		}
 		return parent::autoclose($tagName);
 	}
 }
