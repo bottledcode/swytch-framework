@@ -11,6 +11,7 @@ it('renders correctly', function () {
 				[['SimpleAppIndex'], \Bottledcode\SwytchFramework\Tests\SimpleApp\Index::class],
 				[['TestApp'], \Bottledcode\SwytchFramework\Tests\SimpleApp\App::class],
 				[['TodoItem'], \Bottledcode\SwytchFramework\Tests\SimpleApp\TodoItem::class],
+				[['test:label'], \Bottledcode\SwytchFramework\Tests\SimpleApp\Label::class],
 			],
 		],
 		targetMethods: []
@@ -18,6 +19,7 @@ it('renders correctly', function () {
 	$compiler = new Compiler($container);
 	$compiler->registerComponent(\Bottledcode\SwytchFramework\Tests\SimpleApp\App::class);
 	$compiler->registerComponent(\Bottledcode\SwytchFramework\Tests\SimpleApp\TodoItem::class);
+	$compiler->registerComponent(\Bottledcode\SwytchFramework\Tests\SimpleApp\Label::class);
 	$compiled = $compiler->compileComponent(\Bottledcode\SwytchFramework\Tests\SimpleApp\Index::class);
 	\Spatie\Snapshots\assertMatchesHtmlSnapshot($compiled->renderToString());
 });
