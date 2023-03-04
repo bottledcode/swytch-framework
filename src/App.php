@@ -79,6 +79,11 @@ class App
 			$router = new MagicRouter($this->container, $this->indexClass);
 			$response = $router->go();
 
+			if($response === null) {
+				http_response_code(404);
+				return;
+			}
+
 			/**
 			 * @var Queue $caching
 			 */
@@ -96,16 +101,18 @@ class App
 				}
 			}
 
+			$this->setHeader('Content-Length', (string)strlen($response));
+
 			echo $response;
 		} catch (InvalidRequest $e) {
 			http_response_code(400);
 			$this->container->get(LoggerInterface::class)->warning('Invalid request', ['exception' => $e]);
+			return;
 		} catch (NotAuthorized $e) {
 			http_response_code(401);
 			$this->container->get(LoggerInterface::class)->warning('Not authorized', ['exception' => $e]);
+			return;
 		}
-
-		http_response_code(404);
 	}
 
 	protected function setHeader(string $name, string $value): void
