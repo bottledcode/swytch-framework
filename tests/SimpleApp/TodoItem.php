@@ -4,20 +4,21 @@ namespace Bottledcode\SwytchFramework\Tests\SimpleApp;
 
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
 
-#[Component('SimpleAppTodoItem')]
+#[Component('todoitem')]
 class TodoItem
 {
 	public function __construct()
 	{
 	}
 
-	public function render(array $stuff)
+	public function render(bool $diamond = false)
 	{
+		$diamond = $diamond ? 'diamond' : 'square';
+
 		return <<<HTML
-<hi>{{$stuff['name']}}</hi>
-<form hx-post="/test">
-Verify state: <input name="verify" >
-</form>
+<div>
+ I am a {{$diamond}}
+</div>
 HTML;
 	}
 }
