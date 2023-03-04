@@ -40,6 +40,30 @@ class TreeBuilder extends DOMTreeBuilder
 		}
 	}
 
+	private mixed $previousCurrent = null;
+	private string $waitingFor = '';
+
+	private function collectChildren(string $name): void {
+		$this->waitingFor = $name;
+		$this->previousCurrent = $this->current;
+		$this->current = $this->doc->createDocumentFragment();
+	}
+
+	private function replaceChildren(): void {
+		$this->waitingFor = '';
+		$children = $this->current;
+		$this->current = $this->previousCurrent;
+		$toReplace = $this->document()->getElementsByTagName('children');
+		/**
+		 * @var \DOMElement $child
+		 */
+		foreach($toReplace->getIterator() as $child) {
+			$child->replaceWith($children->childNodes->getIterator());
+		}
+		$this->previousCurrent = null;
+		array_pop(self::$componentStack);
+	}
+
 	public function startTag($name, $attributes = array(), $selfClosing = false)
 	{
 		$this->actuallyClosed = false;
