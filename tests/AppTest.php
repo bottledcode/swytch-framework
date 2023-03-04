@@ -8,7 +8,7 @@ it('renders correctly', function () {
 	\olvlvl\ComposerAttributeCollector\Attributes::with(fn() => new \olvlvl\ComposerAttributeCollector\Collection(
 		targetClasses: [
 			\Bottledcode\SwytchFramework\Template\Attributes\Component::class => [
-				[['SimpleAppIndex'], \Bottledcode\SwytchFramework\Tests\SimpleApp\Index::class],
+				[['todoitem'], \Bottledcode\SwytchFramework\Tests\SimpleApp\Index::class],
 				[['TestApp'], \Bottledcode\SwytchFramework\Tests\SimpleApp\App::class],
 				[['TodoItem'], \Bottledcode\SwytchFramework\Tests\SimpleApp\TodoItem::class],
 				[['test:label'], \Bottledcode\SwytchFramework\Tests\SimpleApp\Label::class],

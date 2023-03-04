@@ -46,7 +46,7 @@ class Variables implements EscaperInterface
 				return substr($future, 1, -1);
 			}
 			$key = '__' . $type . '__' . count($this->blobs) . '__';
-			$this->blobs[$key] = str_replace(["\0LEFT\0","\0RIGHT\0"], [self::LEFT, self::RIGHT], $blob);
+			$this->blobs[$key] = str_replace(["\0LEFT\0", "\0RIGHT\0"], [self::LEFT, self::RIGHT], $blob);
 			$future .= $key;
 			$next = strtok($left);
 			$future .= $next;
@@ -56,8 +56,12 @@ class Variables implements EscaperInterface
 		}
 	}
 
-	public function replaceBlobs(string $html, callable $processor): string
+	public function replaceBlobs(string|true $html, callable $processor): string|true
 	{
+		if ($html === true) {
+			return true;
+		}
+
 		foreach ($this->blobs as $key => $blob) {
 			if (str_contains($html, $key)) {
 				if (str_starts_with($key, '__BLOB__')) {

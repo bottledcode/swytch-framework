@@ -197,7 +197,7 @@ class TreeBuilder extends DOMTreeBuilder
 			);
 
 			// replace attributes with real values
-			$passedAttributes = array_map(fn($value) => $blobber->replaceBlobs($value, Variables::escape(...)),
+			$passedAttributes = array_map(fn($value) => $blobber->replaceBlobs($value ?? true, Variables::escape(...)),
 				$passedAttributes);
 
 			self::$componentStack[] = new RenderedComponent($component, $passedAttributes, $id);
