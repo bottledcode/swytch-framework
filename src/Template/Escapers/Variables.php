@@ -26,6 +26,7 @@ class Variables implements EscaperInterface
 			["{\0LEFT\0", "\0LEFT\0", "\0RIGHT\0"],
 			$html);
 		$html = $this->createBlobWithBoundaries($html, self::LEFT, self::RIGHT, 'BLOB');
+		$html = str_replace(["\0LEFT\0", "\0RIGHT\0"], [self::LEFT, self::RIGHT], $html);
 		return $html;
 	}
 
