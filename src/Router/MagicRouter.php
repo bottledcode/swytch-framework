@@ -18,10 +18,8 @@ use Symfony\Component\Serializer\Serializer;
 
 class MagicRouter
 {
-	private array $middleware = [];
-
 	public string $lastEtag = '';
-
+	private array $middleware = [];
 	private readonly StateProviderInterface $stateProvider;
 
 	public function __construct(private ContainerInterface $container, private string $appRoot)
@@ -33,17 +31,6 @@ class MagicRouter
 	{
 		$this->middleware[] = $middleware;
 		return $this;
-	}
-
-	private function sanitize(array $values): array {
-		foreach($values as &$value) {
-			if(is_array($value)) {
-				$value = $this->sanitize($value);
-			} elseif(is_string($value)) {
-				$value = str_replace(['{', '}'], ['{{', '}}'], $value);
-			}
-		}
-		return $values;
 	}
 
 	public function go(): string|null
@@ -79,39 +66,44 @@ class MagicRouter
 					if (str_starts_with($matchPathParts[$i], ':')) {
 						// replace the placeholder with the actual value
 						$pathArgs[substr($matchPathParts[$i], 1)] = $currentPathParts[$i];
-					} else {
-						if ($matchPathParts[$i] !== $currentPathParts[$i]) {
-							continue 2;
-						}
+					} elseif ($matchPathParts[$i] !== $currentPathParts[$i]) {
+						continue 2;
 					}
 				}
 
 				// deterrmine if the user is authorized to access the route
-				foreach(Attributes::findTargetMethods(Authorized::class) as $target) {
-					if([$target->class, $target->name] === [$route->class, $route->name]) {
-						$authorized = $this->container->get(AuthenticationServiceInterface::class)->isAuthorizedVia(...$target->attribute->roles);
-						if(!$authorized) {
+				foreach (Attributes::findTargetMethods(Authorized::class) as $target) {
+					if ([$target->class, $target->name] === [$route->class, $route->name]) {
+						$authorized = $this->container->get(AuthenticationServiceInterface::class)->isAuthorizedVia(
+							...
+							$target->attribute->roles
+						);
+						if (!$authorized) {
 							throw new NotAuthorized();
 						}
 						break;
 					}
 				}
 
+				$state = null;
 				if ($currentMethod !== Method::GET) {
 					// determine if the payload is json or form data
 					$contentType = $_SERVER['CONTENT_TYPE'] ?? '';
 					$payload = null;
-					if($contentType === 'application/json') {
+					if ($contentType === 'application/json') {
 						$payload = json_decode(
 							file_get_contents('php://input') ?: '',
 							true,
 							flags: JSON_THROW_ON_ERROR
 						);
 					}
-					if($contentType === 'application/x-www-form-urlencoded' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+					if ($contentType === 'application/x-www-form-urlencoded' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 						$payload = $_POST;
-					}elseif($contentType === 'application/x-www-form-urlencoded') {
-						parse_str(file_get_contents('php://input'), $payload);
+					} elseif ($contentType === 'application/x-www-form-urlencoded') {
+						$raw_payload = file_get_contents('php://input');
+						if ($raw_payload !== false) {
+							parse_str($raw_payload, $payload);
+						}
 					}
 					if ($payload === null) {
 						throw new InvalidRequest('Invalid content type: ' . $contentType);
@@ -131,7 +123,7 @@ class MagicRouter
 						throw new InvalidRequest('Invalid state');
 					}
 					if (!empty($state)) {
-						if(!$this->stateProvider->verifyState($state, $state_signature)) {
+						if (!$this->stateProvider->verifyState($state, $state_signature)) {
 							throw new InvalidRequest('Invalid state');
 						}
 						unset($payload['state_hash']);
@@ -162,23 +154,22 @@ class MagicRouter
 					$parameterName = $parameter->getName();
 					if ($parameterName === 'state') {
 						$arguments['state'] = $this->stateProvider->unserializeState($state);
-					} else {
-						if ($parameter->getType() instanceof \ReflectionNamedType && in_array($parameter->getType()->getName(), ['string', 'array', 'int', 'float', 'bool'])) {
-							$name = $parameter->getName();
-							if($from = $parameter->getAttributes(From::class)) {
-								$name = $from[0]->newInstance()->name;
-							}
-
-							$arguments[$parameter->getName()]
-								= $payload[$name] ?? throw new InvalidRequest('Missing parameter: ' . $parameter->getName());
-						} elseif (class_exists($parameter->getType()->getName())) {
-							/** @var Serializer $serializer */
-							$serializer = $this->container->get(Serializer::class);
-							$arguments[$parameter->getName()] = $serializer->denormalize(
-								$payload,
-								$parameter->getType()->getName()
-							);
-						}
+					} elseif ($parameter->getType() instanceof \ReflectionNamedType && in_array(
+							$parameter->getType()->getName(),
+							['string', 'array', 'int', 'float', 'bool']
+						)) {
+						$name = $parameter->getName();
+						$arguments[$parameter->getName()]
+							= $payload[$name] ?? throw new InvalidRequest(
+							'Missing parameter: ' . $parameter->getName()
+						);
+					} elseif (class_exists($parameter->getType()->getName())) {
+						/** @var Serializer $serializer */
+						$serializer = $this->container->get(Serializer::class);
+						$arguments[$parameter->getName()] = $serializer->denormalize(
+							$payload,
+							$parameter->getType()->getName()
+						);
 					}
 				}
 				$component = $this->container->get($route->class);
@@ -196,7 +187,20 @@ class MagicRouter
 		return null;
 	}
 
-	private function sanitizeName(string $name): string {
+	private function sanitize(array $values): array
+	{
+		foreach ($values as &$value) {
+			if (is_array($value)) {
+				$value = $this->sanitize($value);
+			} elseif (is_string($value)) {
+				$value = str_replace(['{', '}'], ['{{', '}}'], $value);
+			}
+		}
+		return $values;
+	}
+
+	private function sanitizeName(string $name): string
+	{
 		return preg_replace('/[^a-z0-9_]/i', '_', $name);
 	}
 }
