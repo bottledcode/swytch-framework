@@ -8,6 +8,7 @@ use Bottledcode\SwytchFramework\Hooks\Api\Invoker;
 use Bottledcode\SwytchFramework\Hooks\Api\Router;
 use Bottledcode\SwytchFramework\Hooks\Common\Determinator;
 use Bottledcode\SwytchFramework\Hooks\Common\Headers;
+use Bottledcode\SwytchFramework\Hooks\Html\HeadTagFilter;
 use Bottledcode\SwytchFramework\Hooks\Html\Renderer;
 use Bottledcode\SwytchFramework\Language\LanguageAcceptor;
 use Bottledcode\SwytchFramework\Router\Exceptions\InvalidRequest;
@@ -37,7 +38,6 @@ use Symfony\Component\Serializer\Normalizer\ArrayDenormalizer;
 use Symfony\Component\Serializer\Normalizer\BackedEnumNormalizer;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
-use Symfony\Component\Serializer\SerializerInterface;
 
 use function DI\create;
 use function DI\get;
@@ -173,6 +173,7 @@ class App
 				Authorization $authorization,
 				Invoker $invoker,
 				Determinator $determinator,
+				HeadTagFilter $headTagFilter,
 			) => (new LifecyleHooks(
 				$escaper
 			))
@@ -181,7 +182,8 @@ class App
 				->preprocessWith($router, 10)
 				->preprocessWith($authorization, 10)
 				->processWith($invoker, 10)
-				->postprocessWith($headers, 10),
+				->postprocessWith($headers, 10)
+				->postprocessWith($headTagFilter, 10),
 			Headers::class => create(Headers::class),
 			Psr17Factory::class => create(Psr17Factory::class),
 			ServerRequestFactoryInterface::class => get(Psr17Factory::class),
