@@ -39,6 +39,7 @@ use Symfony\Component\Serializer\Normalizer\BackedEnumNormalizer;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
 
+use function DI\autowire;
 use function DI\create;
 use function DI\get;
 
@@ -149,22 +150,22 @@ class App
 			'req.ACCEPT_LANGUAGE' =>
 				fn(ContainerInterface $c) => $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? $c->get('env.SWYTCH_DEFAULT_LANGUAGE'),
 			'app.root' => $this->indexClass,
-			StateProviderInterface::class => create(ValidatedState::class)
+			StateProviderInterface::class => autowire(ValidatedState::class)
 				->constructor(get('env.SWYTCH_STATE_SECRET'), get(Serializer::class)),
-			Serializer::class => create(Serializer::class)
+			Serializer::class => autowire(Serializer::class)
 				->constructor([
 					get(ArrayDenormalizer::class),
 					get(BackedEnumNormalizer::class),
 					get(ObjectNormalizer::class),
 				]),
-			LoggerInterface::class => create(NullLogger::class),
-			LanguageAcceptor::class => create(LanguageAcceptor::class)
+			LoggerInterface::class => autowire(NullLogger::class),
+			LanguageAcceptor::class => autowire(LanguageAcceptor::class)
 				->constructor(
 					get('req.ACCEPT_LANGUAGE'),
 					get('env.SWYTCH_SUPPORTED_LANGUAGES'),
 					get('env.SWYTCH_LANGUAGE_DIR')
 				),
-			Renderer::class => create(Renderer::class)->method('setRoot', get('app.root')),
+			Renderer::class => autowire(Renderer::class)->method('setRoot', get('app.root')),
 			LifecyleHooks::class => static fn(
 				Variables $escaper,
 				Headers $headers,
@@ -184,15 +185,15 @@ class App
 				->processWith($invoker, 10)
 				->postprocessWith($headers, 10)
 				->postprocessWith($headTagFilter, 10),
-			Headers::class => create(Headers::class),
-			Psr17Factory::class => create(Psr17Factory::class),
-			ServerRequestFactoryInterface::class => get(Psr17Factory::class),
-			UriFactoryInterface::class => get(Psr17Factory::class),
-			UploadedFileFactoryInterface::class => get(Psr17Factory::class),
-			StreamFactoryInterface::class => get(Psr17Factory::class),
-			ServerRequestCreatorInterface::class => create(ServerRequestCreator::class),
+			Headers::class => autowire(Headers::class),
+			Psr17Factory::class => autowire(Psr17Factory::class),
+			ServerRequestFactoryInterface::class => autowire(Psr17Factory::class),
+			UriFactoryInterface::class => autowire(Psr17Factory::class),
+			UploadedFileFactoryInterface::class => autowire(Psr17Factory::class),
+			StreamFactoryInterface::class => autowire(Psr17Factory::class),
+			ServerRequestCreatorInterface::class => autowire(ServerRequestCreator::class),
 			ResponseInterface::class => fn(Psr17Factory $factory) => $factory->createResponse(),
-			EmitterInterface::class => get(SapiEmitter::class),
+			EmitterInterface::class => autowire(SapiEmitter::class),
 			...$this->dependencyInjection,
 		]);
 
