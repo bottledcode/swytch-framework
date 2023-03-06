@@ -3,23 +3,41 @@
 namespace Bottledcode\SwytchFramework;
 
 use Bottledcode\SwytchFramework\CacheControl\Queue;
+use Bottledcode\SwytchFramework\Hooks\Api\Authorization;
+use Bottledcode\SwytchFramework\Hooks\Api\Invoker;
+use Bottledcode\SwytchFramework\Hooks\Api\Router;
+use Bottledcode\SwytchFramework\Hooks\Common\Determinator;
+use Bottledcode\SwytchFramework\Hooks\Common\Headers;
+use Bottledcode\SwytchFramework\Hooks\Html\Renderer;
 use Bottledcode\SwytchFramework\Language\LanguageAcceptor;
 use Bottledcode\SwytchFramework\Router\Exceptions\InvalidRequest;
 use Bottledcode\SwytchFramework\Router\Exceptions\NotAuthorized;
 use Bottledcode\SwytchFramework\Router\MagicRouter;
+use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
 use Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface;
 use Bottledcode\SwytchFramework\Template\ReferenceImplementation\ValidatedState;
 use DI\ContainerBuilder;
 use DI\Definition\Helper\DefinitionHelper;
+use Laminas\HttpHandlerRunner\Emitter\EmitterInterface;
+use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
+use Nyholm\Psr7\Factory\Psr17Factory;
+use Nyholm\Psr7Server\ServerRequestCreator;
+use Nyholm\Psr7Server\ServerRequestCreatorInterface;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestFactoryInterface;
+use Psr\Http\Message\StreamFactoryInterface;
+use Psr\Http\Message\UploadedFileFactoryInterface;
+use Psr\Http\Message\UriFactoryInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Serializer\Normalizer\ArrayDenormalizer;
 use Symfony\Component\Serializer\Normalizer\BackedEnumNormalizer;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
+use Symfony\Component\Serializer\SerializerInterface;
 
 use function DI\create;
 use function DI\get;
@@ -30,7 +48,7 @@ class App
 
 	/**
 	 * @param bool $debug
-	 * @param string $indexClass
+	 * @param class-string $indexClass
 	 * @param array<array-key, callable-string|callable|DefinitionHelper> $dependencyInjection
 	 * @throws ContainerExceptionInterface
 	 * @throws NotFoundExceptionInterface
@@ -63,23 +81,26 @@ class App
 
 	public function run(): void
 	{
-		$this->setHeader('Vary', 'Accept-Language, Accept-Encoding, Accept');
-		$this->setHeader('X-Frame-Options', 'DENY');
-		$this->setHeader('X-Content-Type-Options', 'nosniff');
-
 		$this->createContainer();
 
+		/**
+		 * @var Headers $headers
+		 */
+		$headers = $this->container->get(Headers::class);
+		$headers->setHeader('Vary', 'Accept-Language, Accept-Encoding, Accept');
+		$headers->setHeader('X-Frame-Options', 'DENY');
+		$headers->setHeader('X-Content-Type-Options', 'nosniff');
+
 		try {
-			/**
-			 * @var LanguageAcceptor $language
-			 */
-			$language = $this->container->get(LanguageAcceptor::class);
-			$language->loadLanguage();
-			$this->setHeader('Content-Language', $language->currentLanguage);
 			$router = new MagicRouter($this->container, $this->indexClass);
 			$response = $router->go();
 
-			if($response === null) {
+			/**
+			 * @var EmitterInterface $emitter
+			 */
+			$emitter = $this->container->get(EmitterInterface::class);
+
+			if ($response === null) {
 				http_response_code(404);
 				return;
 			}
@@ -115,13 +136,6 @@ class App
 		}
 	}
 
-	protected function setHeader(string $name, string $value): void
-	{
-		if (!headers_sent()) {
-			header($name . ': ' . $value);
-		}
-	}
-
 	protected function createContainer(): ContainerInterface
 	{
 		$builder = new ContainerBuilder();
@@ -132,7 +146,9 @@ class App
 			'env.SWYTCH_DEFAULT_LANGUAGE' => fn() => getenv('SWYTCH_DEFAULT_LANGUAGE') ?: 'en',
 			'env.SWYTCH_SUPPORTED_LANGUAGES' => fn() => explode(',', getenv('SWYTCH_SUPPORTED_LANGUAGES') ?: 'en'),
 			'env.SWYTCH_LANGUAGE_DIR' => fn() => getenv('SWYTCH_LANGUAGE_DIR') ?: __DIR__ . '/Language',
-			'req.ACCEPT_LANGUAGE' => fn(ContainerInterface $c) => $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? $c->get('env.SWYTCH_DEFAULT_LANGUAGE'),
+			'req.ACCEPT_LANGUAGE' =>
+				fn(ContainerInterface $c) => $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? $c->get('env.SWYTCH_DEFAULT_LANGUAGE'),
+			'app.root' => $this->indexClass,
 			StateProviderInterface::class => create(ValidatedState::class)
 				->constructor(get('env.SWYTCH_STATE_SECRET'), get(Serializer::class)),
 			Serializer::class => create(Serializer::class)
@@ -148,6 +164,33 @@ class App
 					get('env.SWYTCH_SUPPORTED_LANGUAGES'),
 					get('env.SWYTCH_LANGUAGE_DIR')
 				),
+			Renderer::class => create(Renderer::class)->method('setRoot', get('app.root')),
+			LifecyleHooks::class => static fn(
+				EscaperInterface $escaper,
+				Headers $headers,
+				LanguageAcceptor $languageAcceptor,
+				Router $router,
+				Authorization $authorization,
+				Invoker $invoker,
+				Determinator $determinator,
+			) => (new LifecyleHooks(
+				$escaper
+			))
+				->determineTypeWith($determinator, 10)
+				->preprocessWith($languageAcceptor, 10)
+				->preprocessWith($router, 10)
+				->preprocessWith($authorization, 10)
+				->processWith($invoker, 10)
+				->postprocessWith($headers, 10),
+			Headers::class => create(Headers::class),
+			Psr17Factory::class => create(Psr17Factory::class),
+			ServerRequestFactoryInterface::class => get(Psr17Factory::class),
+			UriFactoryInterface::class => get(Psr17Factory::class),
+			UploadedFileFactoryInterface::class => get(Psr17Factory::class),
+			StreamFactoryInterface::class => get(Psr17Factory::class),
+			ServerRequestCreatorInterface::class => create(ServerRequestCreator::class),
+			ResponseInterface::class => fn(Psr17Factory $factory) => $factory->createResponse(),
+			EmitterInterface::class => get(SapiEmitter::class),
 			...$this->dependencyInjection,
 		]);
 
