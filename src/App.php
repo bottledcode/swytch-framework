@@ -14,7 +14,7 @@ use Bottledcode\SwytchFramework\Language\LanguageAcceptor;
 use Bottledcode\SwytchFramework\Router\Exceptions\InvalidRequest;
 use Bottledcode\SwytchFramework\Router\Exceptions\NotAuthorized;
 use Bottledcode\SwytchFramework\Router\MagicRouter;
-use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
+use Bottledcode\SwytchFramework\Template\Escapers\Variables;
 use Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface;
 use Bottledcode\SwytchFramework\Template\ReferenceImplementation\ValidatedState;
 use DI\ContainerBuilder;
@@ -166,7 +166,7 @@ class App
 				),
 			Renderer::class => create(Renderer::class)->method('setRoot', get('app.root')),
 			LifecyleHooks::class => static fn(
-				EscaperInterface $escaper,
+				Variables $escaper,
 				Headers $headers,
 				LanguageAcceptor $languageAcceptor,
 				Router $router,
