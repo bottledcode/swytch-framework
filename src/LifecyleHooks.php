@@ -43,7 +43,7 @@ class LifecyleHooks
 
 	public function postprocessWith(PostprocessInterface&HandleRequestInterface $postprocessor, int $priority): static
 	{
-		$this->postprocessors[$priority][] = $priority;
+		$this->postprocessors[$priority][] = $postprocessor;
 		return $this;
 	}
 
