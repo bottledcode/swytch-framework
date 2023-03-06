@@ -2,7 +2,9 @@
 
 namespace Bottledcode\SwytchFramework\Hooks;
 
+use Psr\Http\Message\ResponseInterface;
+
 interface PostprocessInterface
 {
-	public function process(string $request): string;
+	public function postprocess(ResponseInterface $response): ResponseInterface;
 }

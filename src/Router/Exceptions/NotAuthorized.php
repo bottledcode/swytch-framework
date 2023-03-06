@@ -2,7 +2,7 @@
 
 namespace Bottledcode\SwytchFramework\Router\Exceptions;
 
-class NotAuthorized extends \Exception
+class NotAuthorized extends \RuntimeException
 {
 	public function __construct(\Throwable $previous = null)
 	{

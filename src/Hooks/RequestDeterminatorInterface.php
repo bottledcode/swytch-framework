@@ -2,7 +2,9 @@
 
 namespace Bottledcode\SwytchFramework\Hooks;
 
+use Psr\Http\Message\ServerRequestInterface;
+
 interface RequestDeterminatorInterface
 {
-	public function currentRequestIs(string $body, RequestType $current): RequestType;
+	public function currentRequestIs(ServerRequestInterface $request, RequestType $type): RequestType;
 }
