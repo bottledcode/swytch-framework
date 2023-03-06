@@ -55,7 +55,7 @@ class LifecyleHooks
 
 	public function determineTypeWith(RequestDeterminatorInterface $middleware, int $priority): static
 	{
-		$this->middleware[$priority][] = $this;
+		$this->middleware[$priority][] = $middleware;
 		return $this;
 	}
 
