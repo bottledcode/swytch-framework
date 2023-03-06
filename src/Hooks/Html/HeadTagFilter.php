@@ -3,11 +3,10 @@
 namespace Bottledcode\SwytchFramework\Hooks\Html;
 
 use Bottledcode\SwytchFramework\Hooks\PostprocessInterface;
-use Gettext\Languages\Exporter\Html;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Psr\Http\Message\ResponseInterface;
 
-class HeadTagFilter extends Html implements PostprocessInterface
+class HeadTagFilter extends HtmlHandler implements PostprocessInterface
 {
 	private array $lines;
 	private bool $added = false;
