@@ -41,18 +41,15 @@ class HeadTagFilter extends HtmlHandler implements PostprocessInterface
 		string $referrerPolicy = 'no-referrer'
 	): void {
 		$src = $this->escaper->escapeHtmlAttr($src);
-		$nonce = $this->escaper->escapeHtmlAttr($nonce);
-		$priority = $this->escaper->escapeHtmlAttr($priority);
-		$referrerPolicy = $this->escaper->escapeHtmlAttr($referrerPolicy);
 		$attributes = implode(
 			' ',
 			array_filter(
 				[
 					$async ? 'async' : null,
 					$defer ? 'defer' : null,
-					$nonce ? "nonce=\"$nonce\"" : null,
-					$priority ? "priority=\"$priority\"" : null,
-					$referrerPolicy ? "referrerPolicy=\"$referrerPolicy\"" : null,
+					$nonce ? "nonce=\"{$this->escaper->escapeHtmlAttr($nonce)}\"" : null,
+					$priority ? "priority=\"{$this->escaper->escapeHtmlAttr($priority)}\"" : null,
+					$referrerPolicy ? "referrerPolicy=\"{$this->escaper->escapeHtmlAttr($referrerPolicy)}\"" : null,
 				]
 			)
 		);
