@@ -3,6 +3,7 @@
 namespace Bottledcode\SwytchFramework\Hooks\Html;
 
 use Bottledcode\SwytchFramework\Hooks\Handler;
+use Bottledcode\SwytchFramework\Hooks\HandleRequestInterface;
 use Bottledcode\SwytchFramework\Hooks\PreprocessInterface;
 use Bottledcode\SwytchFramework\Hooks\RequestType;
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
@@ -12,7 +13,7 @@ use olvlvl\ComposerAttributeCollector\TargetClass;
 use Psr\Http\Message\ServerRequestInterface;
 
 #[Handler(1)]
-class ComponentRegister extends HtmlHandler implements PreprocessInterface
+class ComponentRegister implements PreprocessInterface, HandleRequestInterface
 {
 	public function __construct(private readonly Compiler $compiler)
 	{
@@ -25,5 +26,10 @@ class ComponentRegister extends HtmlHandler implements PreprocessInterface
 			Attributes::findTargetClasses(Component::class)
 		);
 		return $request;
+	}
+
+	public function handles(RequestType $requestType): bool
+	{
+		return $requestType === RequestType::Browser or $requestType === RequestType::Htmx;
 	}
 }
