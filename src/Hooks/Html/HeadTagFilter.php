@@ -17,9 +17,9 @@ class HeadTagFilter extends HtmlHandler implements PostprocessInterface
 	{
 	}
 
-	public function addLines(string $line): void
+	public function addLines(string $tag, string $line): void
 	{
-		$this->lines[] = $line;
+		$this->lines[$tag] = $line;
 	}
 
 	public function postprocess(ResponseInterface $response): ResponseInterface
