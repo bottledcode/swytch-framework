@@ -100,6 +100,8 @@ class App
 			 * @var EmitterInterface $emitter
 			 */
 			$emitter = $this->container->get(EmitterInterface::class);
+			$emitter->emit($response);
+			die();
 
 			if ($response === null) {
 				http_response_code(404);
@@ -123,7 +125,7 @@ class App
 				}
 			}
 
-			$this->setHeader('Content-Length', (string)strlen($response));
+			//$headers->setHeader('Content-Length', (string)strlen($response));
 
 			echo $response;
 		} catch (InvalidRequest $e) {
