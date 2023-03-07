@@ -177,6 +177,7 @@ class App
 				Invoker $invoker,
 				Determinator $determinator,
 				HeadTagFilter $headTagFilter,
+				Renderer $renderer,
 			) => (new LifecyleHooks(
 				$escaper
 			))
@@ -185,6 +186,7 @@ class App
 				->preprocessWith($router, 10)
 				->preprocessWith($authorization, 10)
 				->processWith($invoker, 10)
+				->processWith($renderer, 10)
 				->postprocessWith($headers, 10)
 				->postprocessWith($headTagFilter, 10),
 			Headers::class => autowire(Headers::class),

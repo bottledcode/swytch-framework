@@ -62,7 +62,7 @@ class LifecyleHooks
 	public function preprocess(ServerRequestInterface $request, RequestType $requestType): ServerRequestInterface
 	{
 		ksort($this->preprocessors);
-		$processors = array_merge(...$this->processors);
+		$processors = array_merge(...$this->preprocessors);
 		$processors = array_filter($processors, static fn(HandleRequestInterface $x) => $x->handles($requestType));
 		return array_reduce(
 			$processors,
