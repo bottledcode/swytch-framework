@@ -3,10 +3,6 @@
 namespace Bottledcode\SwytchFramework;
 
 use Bottledcode\SwytchFramework\CacheControl\Queue;
-use Bottledcode\SwytchFramework\Hooks\Api\Authorization;
-use Bottledcode\SwytchFramework\Hooks\Api\Invoker;
-use Bottledcode\SwytchFramework\Hooks\Api\Router;
-use Bottledcode\SwytchFramework\Hooks\Common\Determinator;
 use Bottledcode\SwytchFramework\Hooks\Common\Headers;
 use Bottledcode\SwytchFramework\Hooks\Html\HeadTagFilter;
 use Bottledcode\SwytchFramework\Hooks\Html\Renderer;
@@ -14,7 +10,6 @@ use Bottledcode\SwytchFramework\Language\LanguageAcceptor;
 use Bottledcode\SwytchFramework\Router\Exceptions\InvalidRequest;
 use Bottledcode\SwytchFramework\Router\Exceptions\NotAuthorized;
 use Bottledcode\SwytchFramework\Router\MagicRouter;
-use Bottledcode\SwytchFramework\Template\Escapers\Variables;
 use Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface;
 use Bottledcode\SwytchFramework\Template\ReferenceImplementation\ValidatedState;
 use DI\ContainerBuilder;
@@ -40,7 +35,6 @@ use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
 
 use function DI\autowire;
-use function DI\create;
 use function DI\get;
 
 class App
@@ -91,6 +85,12 @@ class App
 		$headers->setHeader('Vary', 'Accept-Language, Accept-Encoding, Accept');
 		$headers->setHeader('X-Frame-Options', 'DENY');
 		$headers->setHeader('X-Content-Type-Options', 'nosniff');
+
+		/**
+		 * @var HeadTagFilter $htmlHeader
+		 */
+		$htmlHeader = $this->container->get(HeadTagFilter::class);
+		$htmlHeader->addScript('htmx', 'https://unpkg.com/htmx.org@1.8.5', defer: true);
 
 		try {
 			$router = new MagicRouter($this->container);
