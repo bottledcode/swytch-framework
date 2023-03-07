@@ -59,47 +59,44 @@ class Router extends ApiHandler implements PreprocessInterface
 			}
 
 			$body = $request->getBody();
-			// only parse bodies less than 1mb in size
-			if ($body->getSize() < 1000000 && $body->getSize() > 0) {
-				$body = $body->getContents();
-				switch ($request->getHeaderLine('Content-Type')) {
-					case 'application/json':
-						$parsed = json_decode($body, true, flags: JSON_THROW_ON_ERROR);
-						break;
-					case 'application/x-www-form-urlencoded':
-						$parsed = [];
-						parse_str($body, $parsed);
-						break;
-					default:
-						$parsed = null;
-						break;
+			$body = $body->getContents();
+			switch ($request->getHeaderLine('Content-Type')) {
+				case 'application/json':
+					$parsed = json_decode($body, true, flags: JSON_THROW_ON_ERROR);
+					break;
+				case 'application/x-www-form-urlencoded':
+					$parsed = [];
+					parse_str($body, $parsed);
+					break;
+				default:
+					$parsed = null;
+					break;
+			}
+			if (is_array($parsed)) {
+				$expectedToken = $request->getCookieParams()['csrf_token'] ?? throw new InvalidRequest(
+					'Missing CSRF token'
+				);
+				$actualToken = $parsed['csrf_token'] ?? throw new InvalidRequest('Missing CSRF token');
+				if (!hash_equals($expectedToken, $actualToken)) {
+					throw new InvalidRequest('Invalid CSRF token');
 				}
-				if (is_array($parsed)) {
-					$expectedToken = $request->getCookieParams()['csrf_token'] ?? throw new InvalidRequest(
-						'Missing CSRF token'
-					);
-					$actualToken = $parsed['csrf_token'] ?? throw new InvalidRequest('Missing CSRF token');
-					if (!hash_equals($expectedToken, $actualToken)) {
-						throw new InvalidRequest('Invalid CSRF token');
-					}
-					unset($parsed['csrf_token']);
+				unset($parsed['csrf_token']);
 
-					$state = $parsed['state'] ?? null;
-					$stateSignature = $parsed['state_hash'] ?? null;
-					if (!empty($state) && empty($stateSignature)) {
-						throw new InvalidRequest('Missing state signature');
-					}
-					if (!empty($state)) {
-						if (!$this->stateProvider->verifyState($state, $stateSignature)) {
-							throw new InvalidRequest('Invalid state signature');
-						}
-						unset($parsed['state_hash']);
-						unset($parsed['state']);
-						$request = $request->withAttribute(self::ATTRIBUTE_STATE, $state);
-					}
-
-					$request = $request->withParsedBody($this->sanitize($parsed));
+				$state = $parsed['state'] ?? null;
+				$stateSignature = $parsed['state_hash'] ?? null;
+				if (!empty($state) && empty($stateSignature)) {
+					throw new InvalidRequest('Missing state signature');
 				}
+				if (!empty($state)) {
+					if (!$this->stateProvider->verifyState($state, $stateSignature)) {
+						throw new InvalidRequest('Invalid state signature');
+					}
+					unset($parsed['state_hash']);
+					unset($parsed['state']);
+					$request = $request->withAttribute(self::ATTRIBUTE_STATE, $state);
+				}
+
+				$request = $request->withParsedBody($this->sanitize($parsed));
 			}
 
 			// if we made it this far, we have a path match
