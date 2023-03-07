@@ -29,11 +29,12 @@ class Invoker extends ApiHandler implements ProcessInterface
 		 * @var TargetMethod<Route>|null $route
 		 */
 		$route = $request->getAttribute(Router::ATTRIBUTE_HANDLER);
-		$partArgs = $request->getAttribute(Router::ATTRIBUTE_PATH_ARGS);
+		$partArgs = (array)$request->getAttribute(Router::ATTRIBUTE_PATH_ARGS);
 
 		$componentReflection = new \ReflectionClass($route->class);
 		$componentMethod = $componentReflection->getMethod($route->name);
 		$componentParameters = $componentMethod->getParameters();
+		$argPool = [...((array)$request->getParsedBody()), ...$partArgs];
 
 		$arguments = [];
 		foreach ($componentParameters as $parameter) {
@@ -49,7 +50,7 @@ class Invoker extends ApiHandler implements ProcessInterface
 			}
 			$type = $parameter->getType();
 			if ($type instanceof \ReflectionNamedType && $type->isBuiltin()) {
-				$arguments[$parameterName] = $request->getParsedBody()[$parameterName] ?? ($type->allowsNull(
+				$arguments[$parameterName] = $argPool[$parameterName] ?? ($type->allowsNull(
 				) ? null : throw new InvalidRequest(
 					"Missing required parameter {$parameterName} for {$route->class}::{$route->name}"
 				));
@@ -66,7 +67,7 @@ class Invoker extends ApiHandler implements ProcessInterface
 						continue 2;
 					case class_exists($type->getName()):
 						$arguments[$parameterName] = $this->serializer->denormalize(
-							$request->getParsedBody(),
+							$argPool,
 							$type->getName()
 						);
 						continue 2;
