@@ -8,8 +8,10 @@ use Psr\Http\Message\ResponseInterface;
 
 class HeadTagFilter extends HtmlHandler implements PostprocessInterface
 {
-	private array $lines;
-	private bool $added = false;
+	/**
+	 * @var array<string>
+	 */
+	private array $lines = [];
 
 	public function __construct(private readonly Psr17Factory $psr17Factory)
 	{
@@ -17,13 +19,12 @@ class HeadTagFilter extends HtmlHandler implements PostprocessInterface
 
 	public function addLines(string $line): void
 	{
-		$this->added = true;
 		$this->lines[] = $line;
 	}
 
 	public function postprocess(ResponseInterface $response): ResponseInterface
 	{
-		if (!$this->added) {
+		if (!count($this->lines)) {
 			return $response;
 		}
 		$response->getBody()->rewind();
