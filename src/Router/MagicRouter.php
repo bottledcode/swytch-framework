@@ -6,22 +6,16 @@ use Bottledcode\SwytchFramework\LifecyleHooks;
 use Bottledcode\SwytchFramework\Router\Attributes\From;
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
 use Bottledcode\SwytchFramework\Template\Compiler;
-use Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface;
 use Nyholm\Psr7Server\ServerRequestCreatorInterface;
 use olvlvl\ComposerAttributeCollector\Attributes;
 use olvlvl\ComposerAttributeCollector\TargetClass;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;
 
-class MagicRouter
+readonly class MagicRouter
 {
-	public string $lastEtag = '';
-	private array $middleware = [];
-	private readonly StateProviderInterface $stateProvider;
-
-	public function __construct(private ContainerInterface $container, private string $appRoot)
+	public function __construct(private ContainerInterface $container)
 	{
-		$this->stateProvider = $this->container->get(StateProviderInterface::class);
 	}
 
 	public function go(): ResponseInterface
@@ -37,14 +31,6 @@ class MagicRouter
 		$response = $this->container->get(ResponseInterface::class);
 
 		$request = $requestFactory->fromGlobals();
-		/**
-		 * @var Compiler $compiler
-		 */
-		$compiler = $this->container->get(Compiler::class);
-		array_map(
-			static fn(TargetClass $class) => $compiler->registerComponent($class),
-			Attributes::findTargetClasses(Component::class)
-		);
 
 		$requestType = $hooks->determineType($request);
 

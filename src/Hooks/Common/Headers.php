@@ -2,14 +2,13 @@
 
 namespace Bottledcode\SwytchFramework\Hooks\Common;
 
+use Bottledcode\SwytchFramework\Hooks\Handler;
 use Bottledcode\SwytchFramework\Hooks\HandleRequestInterface;
 use Bottledcode\SwytchFramework\Hooks\PostprocessInterface;
-use Bottledcode\SwytchFramework\Hooks\ProcessInterface;
 use Bottledcode\SwytchFramework\Hooks\RequestType;
-use Bottledcode\SwytchFramework\Router\Method;
 use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
 
+#[Handler(10)]
 class Headers implements HandleRequestInterface, PostprocessInterface
 {
 
@@ -34,7 +33,7 @@ class Headers implements HandleRequestInterface, PostprocessInterface
 
 	public function postprocess(ResponseInterface $response): ResponseInterface
 	{
-		foreach($this->headers as $header => $values) {
+		foreach ($this->headers as $header => $values) {
 			$response = $response->withHeader($header, $values);
 		}
 		return $response;
