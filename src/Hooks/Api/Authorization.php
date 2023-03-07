@@ -2,6 +2,7 @@
 
 namespace Bottledcode\SwytchFramework\Hooks\Api;
 
+use Bottledcode\SwytchFramework\Hooks\Handler;
 use Bottledcode\SwytchFramework\Hooks\PreprocessInterface;
 use Bottledcode\SwytchFramework\Hooks\RequestType;
 use Bottledcode\SwytchFramework\Router\Attributes\Authorized;
@@ -13,6 +14,7 @@ use olvlvl\ComposerAttributeCollector\TargetMethod;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
+#[Handler(priority: 11)]
 class Authorization extends ApiHandler implements PreprocessInterface
 {
 

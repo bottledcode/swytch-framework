@@ -2,6 +2,7 @@
 
 namespace Bottledcode\SwytchFramework\Hooks\Api;
 
+use Bottledcode\SwytchFramework\Hooks\Handler;
 use Bottledcode\SwytchFramework\Hooks\PreprocessInterface;
 use Bottledcode\SwytchFramework\Hooks\RequestType;
 use Bottledcode\SwytchFramework\Router\Attributes\Route;
@@ -13,6 +14,7 @@ use Nyholm\Psr7\Uri;
 use olvlvl\ComposerAttributeCollector\Attributes;
 use Psr\Http\Message\ServerRequestInterface;
 
+#[Handler(priority: 10)]
 class Router extends ApiHandler implements PreprocessInterface
 {
 	public const ATTRIBUTE_STATE = 'router-state';

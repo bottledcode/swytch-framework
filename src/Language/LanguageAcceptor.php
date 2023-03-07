@@ -2,6 +2,7 @@
 
 namespace Bottledcode\SwytchFramework\Language;
 
+use Bottledcode\SwytchFramework\Hooks\Handler;
 use Bottledcode\SwytchFramework\Hooks\HandleRequestInterface;
 use Bottledcode\SwytchFramework\Hooks\PreprocessInterface;
 use Bottledcode\SwytchFramework\Hooks\ProcessInterface;
@@ -11,6 +12,7 @@ use Gettext\Translator;
 use Gettext\TranslatorFunctions;
 use Psr\Http\Message\ServerRequestInterface;
 
+#[Handler(1)]
 class LanguageAcceptor implements PreprocessInterface, HandleRequestInterface
 {
 	public readonly string $currentLanguage;

@@ -2,6 +2,7 @@
 
 namespace Bottledcode\SwytchFramework\Hooks\Api;
 
+use Bottledcode\SwytchFramework\Hooks\Handler;
 use Bottledcode\SwytchFramework\Hooks\ProcessInterface;
 use Bottledcode\SwytchFramework\Router\Attributes\Route;
 use Bottledcode\SwytchFramework\Router\Exceptions\InvalidRequest;
@@ -13,6 +14,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Symfony\Component\Serializer\Serializer;
 
+#[Handler(priority: 10)]
 class Invoker extends ApiHandler implements ProcessInterface
 {
 	public function __construct(

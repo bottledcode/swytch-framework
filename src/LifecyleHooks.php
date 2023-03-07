@@ -2,27 +2,50 @@
 
 namespace Bottledcode\SwytchFramework;
 
+use Bottledcode\SwytchFramework\Hooks\Handler;
 use Bottledcode\SwytchFramework\Hooks\HandleRequestInterface;
 use Bottledcode\SwytchFramework\Hooks\PostprocessInterface;
 use Bottledcode\SwytchFramework\Hooks\PreprocessInterface;
 use Bottledcode\SwytchFramework\Hooks\ProcessInterface;
 use Bottledcode\SwytchFramework\Hooks\RequestDeterminatorInterface;
 use Bottledcode\SwytchFramework\Hooks\RequestType;
-use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
+use olvlvl\ComposerAttributeCollector\Attributes;
+use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 class LifecyleHooks
 {
 	public function __construct(
-		private EscaperInterface $escaper,
+		private readonly ContainerInterface $container,
 		private array $preprocessors = [],
 		private array $processors = [],
 		private array $postprocessors = [],
 		private array $middleware = []
 	) {
+		$classes = Attributes::findTargetClasses(Handler::class);
+		foreach ($classes as $class) {
+			try {
+				$reflection = new \ReflectionClass($class->name);
+				if ($reflection->implementsInterface(HandleRequestInterface::class)) {
+					if ($reflection->implementsInterface(PreprocessInterface::class)) {
+						$this->preprocessWith($this->container->get($class->name), $class->attribute->priority);
+					}
+					if ($reflection->implementsInterface(ProcessInterface::class)) {
+						$this->processWith($this->container->get($class->name), $class->attribute->priority);
+					}
+					if ($reflection->implementsInterface(PostprocessInterface::class)) {
+						$this->postprocessWith($this->container->get($class->name), $class->attribute->priority);
+					}
+				}
+				if ($reflection->implementsInterface(RequestDeterminatorInterface::class)) {
+					$this->determineTypeWith($this->container->get($class->name), $class->attribute->priority);
+				}
+			} catch (\ReflectionException) {
+				continue;
+			}
+		}
 	}
-
 
 	/**
 	 * @param HandleRequestInterface&PreprocessInterface $preprocessor
@@ -44,12 +67,6 @@ class LifecyleHooks
 	public function postprocessWith(PostprocessInterface&HandleRequestInterface $postprocessor, int $priority): static
 	{
 		$this->postprocessors[$priority][] = $postprocessor;
-		return $this;
-	}
-
-	public function escapeWith(EscaperInterface $escaper): static
-	{
-		$this->escaper = $escaper;
 		return $this;
 	}
 

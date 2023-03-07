@@ -2,12 +2,14 @@
 
 namespace Bottledcode\SwytchFramework\Hooks\Html;
 
+use Bottledcode\SwytchFramework\Hooks\Handler;
 use Bottledcode\SwytchFramework\Hooks\ProcessInterface;
 use Bottledcode\SwytchFramework\Template\Compiler;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
+#[Handler(10)]
 class Renderer extends HtmlHandler implements ProcessInterface
 {
 	private string $root;

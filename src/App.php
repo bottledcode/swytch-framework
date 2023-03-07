@@ -93,7 +93,7 @@ class App
 		$headers->setHeader('X-Content-Type-Options', 'nosniff');
 
 		try {
-			$router = new MagicRouter($this->container, $this->indexClass);
+			$router = new MagicRouter($this->container);
 			$response = $router->go();
 
 			/**
@@ -168,27 +168,7 @@ class App
 					get('env.SWYTCH_LANGUAGE_DIR')
 				),
 			Renderer::class => autowire(Renderer::class)->method('setRoot', get('app.root')),
-			LifecyleHooks::class => static fn(
-				Variables $escaper,
-				Headers $headers,
-				LanguageAcceptor $languageAcceptor,
-				Router $router,
-				Authorization $authorization,
-				Invoker $invoker,
-				Determinator $determinator,
-				HeadTagFilter $headTagFilter,
-				Renderer $renderer,
-			) => (new LifecyleHooks(
-				$escaper
-			))
-				->determineTypeWith($determinator, 10)
-				->preprocessWith($languageAcceptor, 10)
-				->preprocessWith($router, 10)
-				->preprocessWith($authorization, 10)
-				->processWith($invoker, 10)
-				->processWith($renderer, 10)
-				->postprocessWith($headers, 10)
-				->postprocessWith($headTagFilter, 10),
+			LifecyleHooks::class => autowire(LifecyleHooks::class),
 			Headers::class => autowire(Headers::class),
 			Psr17Factory::class => autowire(Psr17Factory::class),
 			ServerRequestFactoryInterface::class => autowire(Psr17Factory::class),
