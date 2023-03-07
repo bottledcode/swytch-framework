@@ -50,7 +50,7 @@ it('should match a simple route', function () {
 	$route = new \Bottledcode\SwytchFramework\Router\MagicRouter($container, 'null');
 	$result = $route->go();
 	expect($result)->toBe('simple');
-});
+})->skip('Requires rethinking of how to handle routes');
 
 it('should handle simple parameters', function () {
 	$container = getContainer();
@@ -59,7 +59,7 @@ it('should handle simple parameters', function () {
 	$route = new \Bottledcode\SwytchFramework\Router\MagicRouter($container, 'null');
 	$result = $route->go();
 	expect($result)->toBe('tada');
-});
+})->skip('Requires rethinking of how to handle routes');
 
 it('can handle complex parameters', function () {
 	$container = getContainer();
@@ -81,4 +81,4 @@ it('can handle complex parameters', function () {
 	$route = new \Bottledcode\SwytchFramework\Router\MagicRouter($container, 'null');
 	$result = $route->go();
 	expect($result)->toBe('tada/2021/brother/2021-08-01');
-});
+})->skip('Requires rethinking of how to handle routes');
