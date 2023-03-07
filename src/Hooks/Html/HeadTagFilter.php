@@ -32,6 +32,7 @@ class HeadTagFilter extends HtmlHandler implements PostprocessInterface
 	}
 
 	public function addScript(
+		string $tag,
 		string $src,
 		bool $async = false,
 		bool $defer = false,
@@ -56,7 +57,7 @@ class HeadTagFilter extends HtmlHandler implements PostprocessInterface
 			)
 		);
 
-		$this->addLines('script', "<script $attributes src=\"$src\"></script>");
+		$this->addLines($tag, "<script $attributes src=\"$src\"></script>");
 	}
 
 	public function addCss(string $href): void
