@@ -99,9 +99,6 @@ final class Compiler
 	public function compile(string $html): \DOMDocument|\DOMDocumentFragment
 	{
 		$isFragment = !str_contains($html, '<html');
-		if (str_contains($html, '</body>')) {
-			$html = str_replace('</body>', '<script src="https://unpkg.com/htmx.org@1.8.5"></script></body>', $html);
-		}
 
 		$html = $this->escaper->makeBlobs($html);
 
