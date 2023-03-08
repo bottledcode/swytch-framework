@@ -67,7 +67,7 @@ class Router extends ApiHandler implements PreprocessInterface
 					$parsed = json_decode($body, true, flags: JSON_THROW_ON_ERROR);
 					break;
 				case 'application/x-www-form-urlencoded':
-					$parsed = [];
+					$parsed = null;
 					parse_str($body, $parsed);
 					break;
 				default:
