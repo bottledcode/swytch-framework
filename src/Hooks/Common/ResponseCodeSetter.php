@@ -9,7 +9,7 @@ use Bottledcode\SwytchFramework\Hooks\RequestType;
 use Psr\Http\Message\ResponseInterface;
 use Withinboredom\ResponseCode\HttpResponseCode;
 
-#[Handler(PHP_INT_MAX)]
+#[Handler(1000)]
 class ResponseCodeSetter implements HandleRequestInterface, PostprocessInterface
 {
 	private HttpResponseCode $code;
