@@ -57,10 +57,10 @@ class HeadTagFilter extends HtmlHandler implements PostprocessInterface
 		$this->addLines($tag, "<script $attributes src=\"$src\"></script>");
 	}
 
-	public function addCss(string $href): void
+	public function addCss(string $tag, string $href): void
 	{
 		$href = $this->escaper->escapeHtmlAttr($href);
-		$this->addLines('css', "<link rel=\"stylesheet\" type='text/css' href=\"$href\" />");
+		$this->addLines($tag, "<link rel=\"stylesheet\" type='text/css' href=\"$href\" />");
 	}
 
 	public function setMeta(string $property, string $value): void
