@@ -100,6 +100,7 @@
       <path value="$PROJECT_DIR$/vendor/nyholm/psr7" />
       <path value="$PROJECT_DIR$/vendor/laminas/laminas-httphandlerrunner" />
       <path value="$PROJECT_DIR$/vendor/psr/http-server-handler" />
+      <path value="$PROJECT_DIR$/vendor/withinboredom/response-code" />
     </include_path>
   </component>
   <component name="PhpInterpreters">

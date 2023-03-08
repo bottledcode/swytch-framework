@@ -12,7 +12,7 @@ use Withinboredom\ResponseCode\HttpResponseCode;
 #[Handler(1000)]
 class ResponseCodeSetter implements HandleRequestInterface, PostprocessInterface
 {
-	private HttpResponseCode $code;
+	private HttpResponseCode|null $code = null;
 
 	public function setResponseCode(int|HttpResponseCode $code): void
 	{
@@ -30,6 +30,10 @@ class ResponseCodeSetter implements HandleRequestInterface, PostprocessInterface
 
 	public function postprocess(ResponseInterface $response): ResponseInterface
 	{
-		return $response->withStatus($this->code->value);
+		if ($this->code !== null) {
+			return $response->withStatus($this->code->value);
+		}
+
+		return $response;
 	}
 }
