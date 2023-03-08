@@ -74,7 +74,7 @@ class Router extends ApiHandler implements PreprocessInterface
 					$parsed = null;
 					break;
 			}
-			if (is_array($parsed)) {
+			if (is_array($parsed) && !empty($parsed)) {
 				$expectedToken = $request->getCookieParams()['csrf_token'] ?? throw new InvalidRequest(
 					'Missing CSRF token'
 				);
