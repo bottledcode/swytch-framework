@@ -2,6 +2,7 @@
 
 namespace Bottledcode\SwytchFramework;
 
+use Bottledcode\SwytchFramework\Hooks\ExceptionHandlerInterface;
 use Bottledcode\SwytchFramework\Hooks\Handler;
 use Bottledcode\SwytchFramework\Hooks\HandleRequestInterface;
 use Bottledcode\SwytchFramework\Hooks\PostprocessInterface;
@@ -21,7 +22,8 @@ class LifecyleHooks
 		private array $preprocessors = [],
 		private array $processors = [],
 		private array $postprocessors = [],
-		private array $middleware = []
+		private array $middleware = [],
+		private array $exceptionHandlers = [],
 	) {
 		$classes = Attributes::findTargetClasses(Handler::class);
 		foreach ($classes as $class) {
@@ -40,6 +42,9 @@ class LifecyleHooks
 				}
 				if ($reflection->implementsInterface(RequestDeterminatorInterface::class)) {
 					$this->determineTypeWith($this->container->get($class->name), $class->attribute->priority);
+				}
+				if ($reflection->implementsInterface(ExceptionHandlerInterface::class)) {
+					$this->handleExceptionWith($this->container->get($class->name), $class->attribute->priority);
 				}
 			} catch (\ReflectionException) {
 				continue;
@@ -73,6 +78,12 @@ class LifecyleHooks
 	public function determineTypeWith(RequestDeterminatorInterface $middleware, int $priority): static
 	{
 		$this->middleware[$priority][] = $middleware;
+		return $this;
+	}
+
+	public function handleExceptionWith(ExceptionHandlerInterface $handler, int $priority): static
+	{
+		$this->exceptionHandlers[$priority][] = $handler;
 		return $this;
 	}
 
@@ -115,9 +126,9 @@ class LifecyleHooks
 		return array_reduce(
 			array_filter(
 				array_merge(...$this->postprocessors),
-				fn(HandleRequestInterface $x) => $x->handles($type)
+				static fn(HandleRequestInterface $x) => $x->handles($type)
 			),
-			fn(ResponseInterface $carry, PostprocessInterface $processor) => $processor->postprocess($carry),
+			static fn(ResponseInterface $carry, PostprocessInterface $processor) => $processor->postprocess($carry),
 			$response
 		);
 	}
@@ -127,11 +138,33 @@ class LifecyleHooks
 		ksort($this->middleware);
 		return array_reduce(
 			array_merge(...$this->middleware),
-			fn(RequestType $carry, RequestDeterminatorInterface $middleware) => $middleware->currentRequestIs(
+			static fn(RequestType $carry, RequestDeterminatorInterface $middleware) => $middleware->currentRequestIs(
 				$request,
 				$carry
 			),
 			RequestType::Unknown
+		);
+	}
+
+	public function handleException(
+		\Throwable $exception,
+		RequestType $type,
+		ServerRequestInterface $request,
+		ResponseInterface $response
+	): ResponseInterface {
+		ksort($this->exceptionHandlers);
+		$canHandle = array_filter(
+			array_merge(...$this->exceptionHandlers),
+			fn(ExceptionHandlerInterface $x) => $x->canHandle($exception, $type)
+		);
+		return array_reduce(
+			$canHandle,
+			static fn(ResponseInterface $response, ExceptionHandlerInterface $handler) => $handler->handleException(
+				$exception,
+				$request,
+				$response
+			),
+			$response
 		);
 	}
 }
