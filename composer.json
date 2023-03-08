@@ -43,7 +43,8 @@
     "symfony/serializer": "^6.2",
     "nyholm/psr7-server": "^1.0",
     "nyholm/psr7": "^1.5",
-    "laminas/laminas-httphandlerrunner": "^2.5"
+    "laminas/laminas-httphandlerrunner": "^2.5",
+    "withinboredom/response-code": "^1.0"
   },
   "require-dev": {
     "infection/infection": "^0.26.19",
