@@ -64,7 +64,11 @@ class Router extends ApiHandler implements PreprocessInterface
 			$body = $body->getContents();
 			switch ($request->getHeaderLine('Content-Type')) {
 				case 'application/json':
-					$parsed = json_decode($body, true, flags: JSON_THROW_ON_ERROR);
+					try {
+						$parsed = json_decode($body, true, flags: JSON_THROW_ON_ERROR);
+					} catch (\JsonException) {
+						$parsed = null;
+					}
 					break;
 				case 'application/x-www-form-urlencoded':
 					$parsed = null;

@@ -40,7 +40,7 @@ readonly class MagicRouter
 			 * @var Psr17Factory $factory
 			 */
 			$factory = $this->container->get(Psr17Factory::class);
-			$response = $factory->createResponse(500);
+			$response = $factory->createResponse(200);
 			return $hooks->handleException($e, $requestType, $request, $response);
 		}
 		return $response;
