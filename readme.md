@@ -28,6 +28,10 @@ idea of what the framework is capable of and how it works.
 
 Check it out live on [todos.getswytch.com](https://todos.getswytch.com/). This is an implementation of TodoMVC.
 
+### [Once](https://github.com/bottledcode/once)
+
+Check it out live on [once.getswytch.com](https://once.getswytch.com/). This is a secret message app.
+
 ### Authentication
 
 This one isn't open source (yet) but you'll notice it on any of the example apps.
