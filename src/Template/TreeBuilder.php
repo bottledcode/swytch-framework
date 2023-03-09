@@ -232,7 +232,7 @@ class TreeBuilder extends DOMTreeBuilder
 
 			// replace attributes with real values
 			$passedAttributes = array_map(
-				static fn(string $value) => $blobber->replaceBlobs($value, Variables::escape(...)),
+				static fn(string|null $value) => $blobber->replaceBlobs($value ?? true, Variables::escape(...)),
 				$passedAttributes
 			);
 
