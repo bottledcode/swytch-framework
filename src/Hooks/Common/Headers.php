@@ -22,6 +22,14 @@ class Headers implements HandleRequestInterface, PostprocessInterface
 		return true;
 	}
 
+	/**
+	 * Set a HTTP Header.
+	 *
+	 * @param string $name
+	 * @param string $value
+	 * @param bool $overwrite
+	 * @return void
+	 */
 	public function setHeader(string $name, string $value, bool $overwrite = false): void
 	{
 		if ($overwrite) {

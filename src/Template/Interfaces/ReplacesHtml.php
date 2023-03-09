@@ -4,5 +4,5 @@ namespace Bottledcode\SwytchFramework\Template\Interfaces;
 
 interface ReplacesHtml
 {
-    public function replaceTag(): bool;
+	public function replaceTag(): bool;
 }

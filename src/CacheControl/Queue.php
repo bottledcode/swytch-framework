@@ -12,8 +12,12 @@ class Queue
 		$this->queue[] = $builder;
 	}
 
-	public function getSortedQueue(): array {
-		usort($this->queue, fn($a, $b) => $a->compareScore($b));
+	/**
+	 * @return Builder[]
+	 */
+	public function getSortedQueue(): array
+	{
+		usort($this->queue, static fn($a, $b) => $a->compareScore($b));
 		return $this->queue;
 	}
 }

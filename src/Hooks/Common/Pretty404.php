@@ -9,6 +9,7 @@ use Bottledcode\SwytchFramework\Router\Exceptions\NotFound;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
+use Throwable;
 
 #[Handler(1)]
 readonly class Pretty404 implements ExceptionHandlerInterface
@@ -17,20 +18,17 @@ readonly class Pretty404 implements ExceptionHandlerInterface
 	{
 	}
 
-	public function canHandle(\Throwable $exception, RequestType $type): bool
+	public function canHandle(Throwable $exception, RequestType $type): bool
 	{
 		return $exception instanceof NotFound;
 	}
 
 	public function handleException(
-		\Throwable $exception,
+		Throwable $exception,
 		ServerRequestInterface $request,
 		ResponseInterface $response
 	): ResponseInterface {
-		$this->logger->debug('Not found', [
-			'exception' => $exception,
-			'request' => $request,
-		]);
+		$this->logger->debug('Not found', compact('exception', 'request'));
 		return $response->withStatus(404);
 	}
 }

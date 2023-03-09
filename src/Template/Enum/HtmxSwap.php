@@ -5,7 +5,8 @@ namespace Bottledcode\SwytchFramework\Template\Enum;
 /**
  * @see https://htmx.org/docs/#swapping
  */
-enum HtmxSwap : string {
+enum HtmxSwap: string
+{
 	/**
 	 * the default, puts the content inside the target element
 	 */

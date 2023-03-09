@@ -2,7 +2,8 @@
 
 namespace Bottledcode\SwytchFramework\Template\Interfaces;
 
-interface EscaperInterface {
+interface EscaperInterface
+{
 	/**
 	 * Given a string, replaces escaped information with __BLOB__N__ where N is the id of the blob
 	 *

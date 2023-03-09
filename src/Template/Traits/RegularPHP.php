@@ -2,12 +2,25 @@
 
 namespace Bottledcode\SwytchFramework\Template\Traits;
 
-trait RegularPHP {
-	private function begin(): void {
+trait RegularPHP
+{
+
+	/**
+	 * Start output buffering
+	 *
+	 * @return void
+	 */
+	private function begin(): void
+	{
 		ob_start();
 	}
 
-	private function end(): string {
+	/**
+	 * Stop output buffering and return the result
+	 * @return string Everything rendered since begin() was called
+	 */
+	private function end(): string
+	{
 		return ob_get_clean();
 	}
 }

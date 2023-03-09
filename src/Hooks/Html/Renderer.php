@@ -12,12 +12,21 @@ use Psr\Http\Message\ServerRequestInterface;
 #[Handler(10)]
 class Renderer extends HtmlHandler implements ProcessInterface
 {
+	/**
+	 * @var class-string
+	 */
 	private string $root;
 
 	public function __construct(private readonly Compiler $compiler, private readonly Psr17Factory $psr17Factory)
 	{
 	}
 
+	/**
+	 * Set the root component of the application.
+	 *
+	 * @param class-string $root
+	 * @return $this
+	 */
 	public function setRoot(string $root): static
 	{
 		$this->root = $root;

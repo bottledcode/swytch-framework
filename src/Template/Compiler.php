@@ -7,11 +7,19 @@ use Bottledcode\SwytchFramework\Template\Escapers\Variables;
 use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
 use Bottledcode\SwytchFramework\Template\Interfaces\RefProviderInterface;
 use Bottledcode\SwytchFramework\Template\ReferenceImplementation\SimpleRefProvider;
+use DI\FactoryInterface;
+use DOMDocument;
+use DOMDocumentFragment;
 use Laminas\Escaper\Escaper;
+use LogicException;
 use Masterminds\HTML5;
 use Masterminds\HTML5\Exception;
 use olvlvl\ComposerAttributeCollector\TargetClass;
+use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
+use Psr\Container\NotFoundExceptionInterface;
+use ReflectionClass;
+use ReflectionException;
 
 final class Compiler
 {
@@ -21,43 +29,60 @@ final class Compiler
 	 */
 	private array $components = [];
 
-	private \DOMDocument|null $doc = null;
+	private DOMDocument|null $doc = null;
 
 	private readonly RefProviderInterface $refProvider;
 
 	private readonly EscaperInterface $escaper;
 
+	/**
+	 * @param ContainerInterface&FactoryInterface $container
+	 * @throws ContainerExceptionInterface
+	 * @throws NotFoundExceptionInterface
+	 */
 	public function __construct(private readonly ContainerInterface $container)
 	{
 		if ($this->container->has(RefProviderInterface::class)) {
 			$this->refProvider = $this->container->get(RefProviderInterface::class);
 		} else {
 			$this->refProvider = new SimpleRefProvider();
-			if(method_exists($this->container, 'set')) {
+			if (method_exists($this->container, 'set')) {
 				$this->container->set(RefProviderInterface::class, $this->refProvider);
 			}
 		}
 
-		if($this->container->has(EscaperInterface::class)) {
+		if ($this->container->has(EscaperInterface::class)) {
 			$this->escaper = $this->container->get(EscaperInterface::class);
 		} else {
 			$this->escaper = new Variables();
-			if(method_exists($this->container, 'set')) {
+			if (method_exists($this->container, 'set')) {
 				$this->container->set(EscaperInterface::class, $this->escaper);
 			}
 		}
 	}
 
+	/**
+	 * @param mixed $item
+	 * @return string
+	 */
 	public function createRef(mixed $item): string
 	{
 		return $this->refProvider->createRef($item);
 	}
 
+	/**
+	 * @param string $id
+	 * @return void
+	 */
 	public function deleteRef(string $id): void
 	{
 		$this->refProvider->deleteRef($id);
 	}
 
+	/**
+	 * @param string $id
+	 * @return mixed
+	 */
 	public function getRef(string $id): mixed
 	{
 		return $this->refProvider->getRef($id);
@@ -66,7 +91,7 @@ final class Compiler
 	/**
 	 * @param class-string|TargetClass<Component> $component
 	 * @return void
-	 * @throws \ReflectionException
+	 * @throws ReflectionException
 	 */
 	public function registerComponent(string|TargetClass $component): void
 	{
@@ -75,7 +100,7 @@ final class Compiler
 			return;
 		}
 
-		$class = new \ReflectionClass($component);
+		$class = new ReflectionClass($component);
 		$attributes = $class->getAttributes(Component::class);
 
 
@@ -87,16 +112,27 @@ final class Compiler
 		}
 
 		if (empty($attributes)) {
-			throw new \LogicException("Component $component is not annotated with the Component attribute");
+			throw new LogicException("Component {$component} is not annotated with the Component attribute");
 		}
 	}
 
+	/**
+	 * @param class-string $componentName
+	 * @return CompiledComponent
+	 */
 	public function compileComponent(string $componentName): CompiledComponent
 	{
 		return new CompiledComponent($componentName, $this->container, $this);
 	}
 
-	public function compile(string $html): \DOMDocument|\DOMDocumentFragment
+	/**
+	 * @param string $html
+	 * @return DOMDocument|DOMDocumentFragment
+	 * @throws ContainerExceptionInterface
+	 * @throws Exception
+	 * @throws NotFoundExceptionInterface
+	 */
+	public function compile(string $html): DOMDocument|DOMDocumentFragment
 	{
 		$isFragment = !str_contains($html, '<html');
 
@@ -121,10 +157,12 @@ final class Compiler
 	}
 
 	/**
-	 * @throws Exception
+	 * @param DOMDocument|DOMDocumentFragment $document
+	 * @return string
+	 * @throws ContainerExceptionInterface
+	 * @throws NotFoundExceptionInterface
 	 */
-
-	public function renderCompiledHtml(\DOMDocument|\DOMDocumentFragment $document): string
+	public function renderCompiledHtml(DOMDocument|DOMDocumentFragment $document): string
 	{
 		$file = fopen('php://temp', 'wb');
 		if ($file === false) {

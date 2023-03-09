@@ -20,17 +20,40 @@ class HeadTagFilter extends HtmlHandler implements PostprocessInterface
 	{
 	}
 
+	/**
+	 * Set the html title.
+	 * @param string $title
+	 * @return void
+	 */
 	public function setTitle(string $title): void
 	{
 		$title = $this->escaper->escapeHtml($title);
-		$this->addLines('title', "<title>$title</title>");
+		$this->addLines('title', "<title>{$title}</title>");
 	}
 
+	/**
+	 * Add a line to the head tag.
+	 * @param string $tag
+	 * @param string $line
+	 * @return void
+	 */
 	public function addLines(string $tag, string $line): void
 	{
 		$this->lines[$tag] = $line;
 	}
 
+	/**
+	 * Add a script tag to the head.
+	 *
+	 * @param string $tag Unique tag for this script.
+	 * @param string $src The URL of the script.
+	 * @param bool $async Whether to load the script asynchronously.
+	 * @param bool $defer Whether to load the script deferentially.
+	 * @param string|null $priority The priority of the script.
+	 * @param string|null $nonce The nonce for the script.
+	 * @param string $referrerPolicy The referrer policy for the script.
+	 * @return void
+	 */
 	public function addScript(
 		string $tag,
 		string $src,
@@ -54,23 +77,39 @@ class HeadTagFilter extends HtmlHandler implements PostprocessInterface
 			)
 		);
 
-		$this->addLines($tag, "<script $attributes src=\"$src\"></script>");
+		$this->addLines($tag, "<script {$attributes} src=\"{$src}\"></script>");
 	}
 
+	/**
+	 * Add a css tag to the head.
+	 *
+	 * @param string $tag
+	 * @param string $href
+	 * @return void
+	 */
 	public function addCss(string $tag, string $href): void
 	{
 		$href = $this->escaper->escapeHtmlAttr($href);
-		$this->addLines($tag, "<link rel=\"stylesheet\" type='text/css' href=\"$href\" />");
+		$this->addLines($tag, "<link rel=\"stylesheet\" type='text/css' href=\"{$href}\" />");
 	}
 
+	/**
+	 * Add a meta tag to the head.
+	 *
+	 * @param string $property
+	 * @param string $value
+	 * @return void
+	 */
 	public function setMeta(string $property, string $value): void
 	{
 		$value = $this->escaper->escapeHtmlAttr($value);
 		$property = $this->escaper->escapeHtmlAttr($property);
-		$this->addLines($property, "<meta property=\"$property\" content=\"$value\" />");
+		$this->addLines($property, "<meta property=\"{$property}\" content=\"{$value}\" />");
 	}
 
 	/**
+	 * Add a canonical tag to the head.
+	 *
 	 * @param string $pageUrl The canonical URL for your page. This should be the undecorated URL, without session variables, user identifying parameters, or counters. Likes and Shares for this URL will aggregate at this URL.
 	 * @param string $title The title of your article without any branding such as your site name.
 	 * @param string $description A brief description of the content, usually between 2 and 4 sentences. This will be displayed below the title of the post on Facebook.
@@ -89,13 +128,13 @@ class HeadTagFilter extends HtmlHandler implements PostprocessInterface
 		$title = $this->escaper->escapeHtmlAttr($title);
 		$description = $this->escaper->escapeHtmlAttr($description);
 		$imageUrl = $this->escaper->escapeHtmlAttr($imageUrl);
-		$this->addLines('og:url', "<meta property=\"og:url\" content=\"$pageUrl\" />");
-		$this->addLines('og:title', "<meta property=\"og:title\" content=\"$title\" />");
-		$this->addLines('og:description', "<meta property=\"og:description\" content=\"$description\" />");
-		$this->addLines('og:image', "<meta property=\"og:image\" content=\"$imageUrl\" />");
+		$this->addLines('og:url', "<meta property=\"og:url\" content=\"{$pageUrl}\" />");
+		$this->addLines('og:title', "<meta property=\"og:title\" content=\"{$title}\" />");
+		$this->addLines('og:description', "<meta property=\"og:description\" content=\"{$description}\" />");
+		$this->addLines('og:image', "<meta property=\"og:image\" content=\"{$imageUrl}\" />");
 		if ($locale !== null) {
 			$locale = $this->escaper->escapeHtmlAttr($locale);
-			$this->addLines('og:locale', "<meta property=\"og:locale\" content=\"$locale\" />");
+			$this->addLines('og:locale', "<meta property=\"og:locale\" content=\"{$locale}\" />");
 		}
 	}
 
@@ -108,14 +147,14 @@ class HeadTagFilter extends HtmlHandler implements PostprocessInterface
 	public function setTwitterCard(string $type, string|null $usernameFooter = null, string|null $author = null): void
 	{
 		$type = $this->escaper->escapeHtmlAttr($type);
-		$this->addLines('twitter:card', "<meta property=\"twitter:card\" content=\"$type\" />");
+		$this->addLines('twitter:card', "<meta property=\"twitter:card\" content=\"{$type}\" />");
 		if ($usernameFooter !== null) {
 			$usernameFooter = $this->escaper->escapeHtmlAttr($usernameFooter);
-			$this->addLines('twitter:site', "<meta property=\"twitter:site\" content=\"$usernameFooter\" />");
+			$this->addLines('twitter:site', "<meta property=\"twitter:site\" content=\"{$usernameFooter}\" />");
 		}
 		if ($author !== null) {
 			$author = $this->escaper->escapeHtmlAttr($author);
-			$this->addLines('twitter:creator', "<meta property=\"twitter:creator\" content=\"$author\" />");
+			$this->addLines('twitter:creator', "<meta property=\"twitter:creator\" content=\"{$author}\" />");
 		}
 	}
 

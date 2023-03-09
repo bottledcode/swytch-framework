@@ -3,11 +3,13 @@
 namespace Bottledcode\SwytchFramework\Router;
 
 use Bottledcode\SwytchFramework\LifecyleHooks;
-use Bottledcode\SwytchFramework\Router\Attributes\From;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7Server\ServerRequestCreatorInterface;
+use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use Psr\Http\Message\ResponseInterface;
+use Throwable;
 
 readonly class MagicRouter
 {
@@ -15,6 +17,10 @@ readonly class MagicRouter
 	{
 	}
 
+	/**
+	 * @throws NotFoundExceptionInterface
+	 * @throws ContainerExceptionInterface
+	 */
 	public function go(): ResponseInterface
 	{
 		/**
@@ -35,7 +41,7 @@ readonly class MagicRouter
 			$request = $hooks->preprocess($request, $requestType);
 			$response = $hooks->process($request, $requestType, $response);
 			$response = $hooks->postProcess($response, $requestType);
-		} catch (\Throwable $e) {
+		} catch (Throwable $e) {
 			/**
 			 * @var Psr17Factory $factory
 			 */

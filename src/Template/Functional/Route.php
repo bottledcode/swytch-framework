@@ -5,6 +5,7 @@ namespace Bottledcode\SwytchFramework\Template\Functional;
 use Bottledcode\SwytchFramework\Router\Method;
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
 use Bottledcode\SwytchFramework\Template\Interfaces\HxInterface;
+use LogicException;
 
 #[Component('Route')]
 class Route implements HxInterface
@@ -37,13 +38,13 @@ class Route implements HxInterface
 			$method = $_SERVER['REQUEST_METHOD'];
 		}
 
-		$method = Method::tryFrom(strtoupper($method)) ?? throw new \LogicException('Invalid method: ' . $method);
+		$method = Method::tryFrom(strtoupper($method)) ?? throw new LogicException('Invalid method: ' . $method);
 		$actualMethod = Method::tryFrom($_SERVER['REQUEST_METHOD']);
 		if ($actualMethod !== $method) {
 			return '';
 		}
 
-		$actualPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+		$actualPath = (string)parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 		$actualParts = array_values(array_filter(explode('/', $actualPath)));
 		$parts = array_values(array_filter(explode('/', $path)));
 		if (($numParts = count($actualParts)) !== count($parts)) {
@@ -53,10 +54,8 @@ class Route implements HxInterface
 		for ($i = 0; $i < $numParts; $i++) {
 			if (str_starts_with($parts[$i], ':')) {
 				$render = str_replace("{{$parts[$i]}}", $actualParts[$i], $render);
-			} else {
-				if ($parts[$i] !== $actualParts[$i]) {
-					return '';
-				}
+			} elseif ($parts[$i] !== $actualParts[$i]) {
+				return '';
 			}
 		}
 

@@ -14,6 +14,12 @@ class ResponseCodeSetter implements HandleRequestInterface, PostprocessInterface
 {
 	private HttpResponseCode|null $code = null;
 
+	/**
+	 * Set the HTTP response code to be used for the response.
+	 *
+	 * @param int|HttpResponseCode $code
+	 * @return void
+	 */
 	public function setResponseCode(int|HttpResponseCode $code): void
 	{
 		if (is_int($code)) {

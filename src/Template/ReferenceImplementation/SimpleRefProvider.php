@@ -3,25 +3,28 @@
 namespace Bottledcode\SwytchFramework\Template\ReferenceImplementation;
 
 use Bottledcode\SwytchFramework\Template\Interfaces\RefProviderInterface;
+use LogicException;
+use RuntimeException;
 
-class SimpleRefProvider implements RefProviderInterface {
+class SimpleRefProvider implements RefProviderInterface
+{
 	private array $refs = [];
 
 	public function createRef(mixed $item): string
 	{
-		if(is_numeric($item) || is_string($item) || is_bool($item) || is_null($item)) {
+		if (is_numeric($item) || is_string($item) || is_bool($item) || $item === null) {
 			// can't create a scalar ref
-			return (string) $item;
+			return (string)$item;
 		}
 
-		if(is_callable($item)) {
-			throw new \LogicException('Cannot create a ref to a callable');
+		if (is_callable($item)) {
+			throw new LogicException('Cannot create a ref to a callable');
 		}
 
 		// this is terrible, but it works for now
 		retry:
 		$id = base64_encode(random_bytes(9));
-		if(isset($this->refs[$id])) {
+		if (isset($this->refs[$id])) {
 			goto retry;
 		}
 
@@ -32,7 +35,7 @@ class SimpleRefProvider implements RefProviderInterface {
 
 	public function getRef(string $ref): mixed
 	{
-		return $this->refs[$ref] ?? throw new \RuntimeException('Ref not found');
+		return $this->refs[$ref] ?? throw new RuntimeException('Ref not found');
 	}
 
 	public function deleteRef(string $ref): void

@@ -7,11 +7,16 @@ use Bottledcode\SwytchFramework\Hooks\ProcessInterface;
 use Bottledcode\SwytchFramework\Router\Attributes\Route;
 use Bottledcode\SwytchFramework\Router\Exceptions\InvalidRequest;
 use Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface;
+use DI\DependencyException;
 use DI\FactoryInterface;
+use DI\NotFoundException;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use olvlvl\ComposerAttributeCollector\TargetMethod;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use ReflectionClass;
+use ReflectionException;
+use ReflectionNamedType;
 use Symfony\Component\Serializer\Serializer;
 
 #[Handler(priority: 10)]
@@ -25,6 +30,11 @@ class Invoker extends ApiHandler implements ProcessInterface
 	) {
 	}
 
+	/**
+	 * @throws NotFoundException
+	 * @throws ReflectionException
+	 * @throws DependencyException
+	 */
 	public function process(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
 	{
 		/**
@@ -33,7 +43,7 @@ class Invoker extends ApiHandler implements ProcessInterface
 		$route = $request->getAttribute(Router::ATTRIBUTE_HANDLER);
 		$partArgs = (array)$request->getAttribute(Router::ATTRIBUTE_PATH_ARGS);
 
-		$componentReflection = new \ReflectionClass($route->class);
+		$componentReflection = new ReflectionClass($route->class);
 		$componentMethod = $componentReflection->getMethod($route->name);
 		$componentParameters = $componentMethod->getParameters();
 		$argPool = [...((array)$request->getParsedBody()), ...$partArgs];
@@ -51,7 +61,7 @@ class Invoker extends ApiHandler implements ProcessInterface
 				continue;
 			}
 			$type = $parameter->getType();
-			if ($type instanceof \ReflectionNamedType && $type->isBuiltin()) {
+			if ($type instanceof ReflectionNamedType && $type->isBuiltin()) {
 				$arguments[$parameterName] = $argPool[$parameterName] ?? ($type->allowsNull(
 				) ? null : throw new InvalidRequest(
 					"Missing required parameter {$parameterName} for {$route->class}::{$route->name}"
@@ -59,7 +69,7 @@ class Invoker extends ApiHandler implements ProcessInterface
 				continue;
 			}
 
-			if ($type instanceof \ReflectionNamedType) {
+			if ($type instanceof ReflectionNamedType) {
 				switch (true) {
 					case $type->getName() === ServerRequestInterface::class:
 						$arguments[$parameterName] = $request;

@@ -23,7 +23,6 @@ it('can be used to route to other components based on request', function () {
 	$app = $compiler->compileComponent(RouterAppIndex::class);
 	expect($app)->toBeInstanceOf(CompiledComponent::class);
 	assertMatchesHtmlSnapshot($app->renderToString());
-	assertMatchesTextSnapshot($app->etag);
 
 	$container->set(Route::class, null);
 });

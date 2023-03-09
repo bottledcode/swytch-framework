@@ -5,7 +5,6 @@ namespace Bottledcode\SwytchFramework\Language;
 use Bottledcode\SwytchFramework\Hooks\Handler;
 use Bottledcode\SwytchFramework\Hooks\HandleRequestInterface;
 use Bottledcode\SwytchFramework\Hooks\PreprocessInterface;
-use Bottledcode\SwytchFramework\Hooks\ProcessInterface;
 use Bottledcode\SwytchFramework\Hooks\RequestType;
 use Gettext\Loader\MoLoader;
 use Gettext\Translator;

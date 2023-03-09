@@ -2,18 +2,16 @@
 
 namespace Bottledcode\SwytchFramework;
 
-use Bottledcode\SwytchFramework\CacheControl\Queue;
 use Bottledcode\SwytchFramework\Hooks\Common\Headers;
 use Bottledcode\SwytchFramework\Hooks\Html\HeadTagFilter;
 use Bottledcode\SwytchFramework\Hooks\Html\Renderer;
 use Bottledcode\SwytchFramework\Language\LanguageAcceptor;
-use Bottledcode\SwytchFramework\Router\Exceptions\InvalidRequest;
-use Bottledcode\SwytchFramework\Router\Exceptions\NotAuthorized;
 use Bottledcode\SwytchFramework\Router\MagicRouter;
 use Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface;
 use Bottledcode\SwytchFramework\Template\ReferenceImplementation\ValidatedState;
 use DI\ContainerBuilder;
 use DI\Definition\Helper\DefinitionHelper;
+use Exception;
 use Laminas\HttpHandlerRunner\Emitter\EmitterInterface;
 use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
 use Nyholm\Psr7\Factory\Psr17Factory;
@@ -29,6 +27,7 @@ use Psr\Http\Message\UploadedFileFactoryInterface;
 use Psr\Http\Message\UriFactoryInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use RuntimeException;
 use Symfony\Component\Serializer\Normalizer\ArrayDenormalizer;
 use Symfony\Component\Serializer\Normalizer\BackedEnumNormalizer;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
@@ -37,6 +36,10 @@ use Symfony\Component\Serializer\Serializer;
 use function DI\autowire;
 use function DI\get;
 
+/**
+ * This is the main entrypoint for the application. It can be overridden and extended for customization. It is
+ * responsible for configuration of the app container and for running the application.
+ */
 class App
 {
 	protected ContainerInterface|null $container = null;
@@ -45,6 +48,7 @@ class App
 	 * @param bool $debug
 	 * @param class-string $indexClass
 	 * @param array<array-key, callable-string|callable|DefinitionHelper> $dependencyInjection
+	 * @param bool $registerErrorHandler
 	 * @throws ContainerExceptionInterface
 	 * @throws NotFoundExceptionInterface
 	 */
@@ -72,78 +76,19 @@ class App
 				die();
 			});
 		}
-	}
-
-	public function run(): void
-	{
 		$this->createContainer();
-
-		/**
-		 * @var Headers $headers
-		 */
-		$headers = $this->container->get(Headers::class);
-		$headers->setHeader('Vary', 'Accept-Language, Accept-Encoding, Accept');
-		$headers->setHeader('X-Frame-Options', 'DENY');
-		$headers->setHeader('X-Content-Type-Options', 'nosniff');
-
-		/**
-		 * @var HeadTagFilter $htmlHeader
-		 */
-		$htmlHeader = $this->container->get(HeadTagFilter::class);
-		$htmlHeader->addScript('htmx', 'https://unpkg.com/htmx.org@1.8.5', defer: true);
-
-		try {
-			$router = new MagicRouter($this->container);
-			$response = $router->go();
-
-			/**
-			 * @var EmitterInterface $emitter
-			 */
-			$emitter = $this->container->get(EmitterInterface::class);
-			$emitter->emit($response);
-			die();
-
-			if ($response === null) {
-				http_response_code(404);
-				return;
-			}
-
-			/**
-			 * @var Queue $caching
-			 */
-			$caching = $this->container->get(Queue::class);
-			$cacheResult = $caching->getSortedQueue()[0] ?? null;
-
-			if (!empty($cacheResult) && method_exists($cacheResult, 'render')) {
-				if ($this->debug) {
-					$this->setHeader('Cache-Tag-Rendered', $cacheResult->tag);
-				}
-				$cacheResult->render($router->lastEtag);
-				if ($cacheResult->etagRequired && !empty($router->lastEtag)) {
-					http_response_code(304);
-					return;
-				}
-			}
-
-			//$headers->setHeader('Content-Length', (string)strlen($response));
-
-			echo $response;
-		} catch (InvalidRequest $e) {
-			http_response_code(400);
-			$this->container->get(LoggerInterface::class)->warning('Invalid request', ['exception' => $e]);
-			return;
-		} catch (NotAuthorized $e) {
-			http_response_code(401);
-			$this->container->get(LoggerInterface::class)->warning('Not authorized', ['exception' => $e]);
-			return;
-		}
 	}
 
+	/**
+	 * Creates the application container.
+	 * @return ContainerInterface
+	 * @throws Exception
+	 */
 	protected function createContainer(): ContainerInterface
 	{
 		$builder = new ContainerBuilder();
 		$builder->addDefinitions([
-			'env.SWYTCH_STATE_SECRET' => fn() => getenv('SWYTCH_STATE_SECRET') ?: throw new \RuntimeException(
+			'env.SWYTCH_STATE_SECRET' => fn() => getenv('SWYTCH_STATE_SECRET') ?: throw new RuntimeException(
 				'Missing STATE_SECRET env var'
 			),
 			'env.SWYTCH_DEFAULT_LANGUAGE' => fn() => getenv('SWYTCH_DEFAULT_LANGUAGE') ?: 'en',
@@ -186,5 +131,48 @@ class App
 		}
 
 		return $this->container = $builder->build();
+	}
+
+	/**
+	 * Runs the application.
+	 *
+	 * @return void
+	 * @throws ContainerExceptionInterface
+	 * @throws NotFoundExceptionInterface
+	 */
+	public function run(): void
+	{
+		/**
+		 * @var Headers $headers
+		 */
+		$headers = $this->container->get(Headers::class);
+		$headers->setHeader('Vary', 'Accept-Language, Accept-Encoding, Accept');
+		$headers->setHeader('X-Frame-Options', 'DENY');
+		$headers->setHeader('X-Content-Type-Options', 'nosniff');
+
+		/**
+		 * @var HeadTagFilter $htmlHeader
+		 */
+		$htmlHeader = $this->container->get(HeadTagFilter::class);
+		$htmlHeader->addScript('htmx', 'https://unpkg.com/htmx.org@1.8.5', defer: true);
+
+		$router = new MagicRouter($this->container);
+		$response = $router->go();
+
+		/**
+		 * @var EmitterInterface $emitter
+		 */
+		$emitter = $this->container->get(EmitterInterface::class);
+		$emitter->emit($response);
+
+		flush();
+	}
+
+	/**
+	 * @return ContainerInterface The application container.
+	 */
+	public function getContainer(): ContainerInterface
+	{
+		return $this->container;
 	}
 }

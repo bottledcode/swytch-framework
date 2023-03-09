@@ -3,17 +3,26 @@
 namespace Bottledcode\SwytchFramework\Template;
 
 use Bottledcode\SwytchFramework\Template\Interfaces\BeforeRenderInterface;
+use DI\DependencyException;
 use DI\FactoryInterface;
+use DI\NotFoundException;
+use DOMDocument;
+use DOMDocumentFragment;
+use Masterminds\HTML5\Exception;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\ContainerInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use ReflectionClass;
+use ReflectionException;
+use RuntimeException;
 
 readonly class CompiledComponent
 {
-	public string $etag;
 	public mixed $renderedComponent;
 
 	/**
 	 * @param class-string $component
-	 * @param FactoryInterface $container
+	 * @param FactoryInterface&ContainerInterface $container
 	 * @param Compiler $compiler
 	 */
 	public function __construct(
@@ -23,14 +32,27 @@ readonly class CompiledComponent
 	) {
 	}
 
+	/**
+	 * @return string
+	 * @throws ContainerExceptionInterface
+	 * @throws NotFoundExceptionInterface
+	 */
 	public function renderToString(): string
 	{
 		$dom = $this->compile();
-		$this->generateEtag($dom);
 		return $this->compiler->renderCompiledHtml($dom);
 	}
 
-	public function compile(array $attributes = []): \DOMDocument|\DOMDocumentFragment
+	/**
+	 * @param array<string, string> $attributes
+	 * @return DOMDocument|DOMDocumentFragment
+	 * @throws ContainerExceptionInterface
+	 * @throws NotFoundExceptionInterface
+	 * @throws DependencyException
+	 * @throws NotFoundException
+	 * @throws Exception
+	 */
+	public function compile(array $attributes = []): DOMDocument|DOMDocumentFragment
 	{
 		// we are about to render
 		$component = $this->container->make($this->component);
@@ -51,19 +73,9 @@ readonly class CompiledComponent
 		return $this->compiler->compile($rendered);
 	}
 
-	private function generateEtag(\DOMDocument|\DOMDocumentFragment $dom): void
-	{
-		if (isset($this->etag)) {
-			return;
-		}
-		if ($dom instanceof \DOMDocument) {
-			$this->etag = md5($dom->textContent);
-		}
-		if ($dom instanceof \DOMDocumentFragment) {
-			$this->etag = md5($dom->textContent);
-		}
-	}
-
+	/**
+	 * @return array<string, int>
+	 */
 	public function getUsedAttributes(): array
 	{
 		$attributes = [];
@@ -74,8 +86,8 @@ readonly class CompiledComponent
 			foreach ($parameterReflection as $parameter) {
 				$attributes[] = $parameter->getName();
 			}
-		} catch (\ReflectionException $e) {
-			throw new \RuntimeException("Component {$this->component} does not have a render method");
+		} catch (ReflectionException $e) {
+			throw new RuntimeException("Component {$this->component} does not have a render method");
 		}
 		return array_flip($attributes);
 	}

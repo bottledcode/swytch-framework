@@ -9,6 +9,7 @@ use Bottledcode\SwytchFramework\Router\Exceptions\InvalidRequest;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
+use Throwable;
 
 #[Handler(1)]
 readonly class Pretty400 implements ExceptionHandlerInterface
@@ -17,20 +18,17 @@ readonly class Pretty400 implements ExceptionHandlerInterface
 	{
 	}
 
-	public function canHandle(\Throwable $exception, RequestType $type): bool
+	public function canHandle(Throwable $exception, RequestType $type): bool
 	{
 		return $exception instanceof InvalidRequest;
 	}
 
 	public function handleException(
-		\Throwable $exception,
+		Throwable $exception,
 		ServerRequestInterface $request,
 		ResponseInterface $response
 	): ResponseInterface {
-		$this->logger->error('Invalid request', [
-			'exception' => $exception,
-			'request' => $request,
-		]);
+		$this->logger->error('Invalid request', compact('exception', 'request'));
 		return $response->withStatus(400);
 	}
 }

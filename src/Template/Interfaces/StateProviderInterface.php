@@ -5,7 +5,8 @@ namespace Bottledcode\SwytchFramework\Template\Interfaces;
 /**
  * Provides state serialization and signing for state transmission to rerender components.
  */
-interface StateProviderInterface {
+interface StateProviderInterface
+{
 	/**
 	 * Serialize state for embedding in the DOM
 	 *

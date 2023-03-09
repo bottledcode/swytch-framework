@@ -8,6 +8,7 @@ use Bottledcode\SwytchFramework\Hooks\RequestType;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
+use Throwable;
 
 #[Handler(1000)]
 readonly class UnhandledError implements ExceptionHandlerInterface
@@ -16,21 +17,18 @@ readonly class UnhandledError implements ExceptionHandlerInterface
 	{
 	}
 
-	public function canHandle(\Throwable $exception, RequestType $type): bool
+	public function canHandle(Throwable $exception, RequestType $type): bool
 	{
 		return true;
 	}
 
 	public function handleException(
-		\Throwable $exception,
+		Throwable $exception,
 		ServerRequestInterface $request,
 		ResponseInterface $response
 	): ResponseInterface {
 		if ($response->getStatusCode() === 200) {
-			$this->logger->error('Unhandled exception', [
-				'exception' => $exception,
-				'request' => $request,
-			]);
+			$this->logger->error('Unhandled exception', compact('exception', 'request'));
 			return $response->withStatus(500);
 		}
 		return $response;

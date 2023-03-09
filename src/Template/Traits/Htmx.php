@@ -2,19 +2,30 @@
 
 namespace Bottledcode\SwytchFramework\Template\Traits;
 
+use Bottledcode\SwytchFramework\Hooks\Common\Headers;
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
 use Bottledcode\SwytchFramework\Template\Compiler;
 use Bottledcode\SwytchFramework\Template\Enum\HtmxSwap;
-use Bottledcode\SwytchFramework\Template\Escapers\Variables;
+use JsonException;
+use LogicException;
+use Masterminds\HTML5\Exception;
 use olvlvl\ComposerAttributeCollector\Attributes;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use Symfony\Component\Serializer\Serializer;
 
 trait Htmx
 {
 	private readonly Serializer $serializer;
 	private readonly Compiler $compiler;
+	private readonly Headers $headers;
 
-	function dangerous(string $html): string
+	/**
+	 * Don't perform any escaping or rendering on the given HTML
+	 * @param string $html The HTML to render
+	 * @return string
+	 */
+	private function dangerous(string $html): string
 	{
 		static $boundary = null;
 		if ($boundary === null) {
@@ -24,8 +35,20 @@ trait Htmx
 		return $boundary . $html . $boundary;
 	}
 
+	/**
+	 * Render the given HTML and any components it contains
+	 * @param string $html
+	 * @return string
+	 * @throws Exception
+	 * @throws ContainerExceptionInterface
+	 * @throws NotFoundExceptionInterface
+	 */
 	private function html(string $html): string
 	{
+		if (empty($this->compiler)) {
+			throw new LogicException('Can not render HTML without a compiler');
+		}
+
 		$dom = $this->compiler->compile($html);
 		return $this->compiler->renderCompiledHtml($dom);
 	}
@@ -40,7 +63,7 @@ trait Htmx
 	 * @param array|null $values
 	 * @param array|null $headers
 	 * @return void
-	 * @throws \JsonException
+	 * @throws JsonException
 	 */
 	private function redirectClient(
 		string $url,
@@ -50,35 +73,46 @@ trait Htmx
 		array|null $values = null,
 		array|null $headers = null
 	): void {
+		if (empty($this->headers)) {
+			throw new LogicException('Can not redirect without Headers');
+		}
 		if (!empty(array_filter([$handler, $target, $swap, $values, $headers]))) {
 			$attributes = json_encode(
 				array_filter(compact('url', 'handler', 'target', 'swap', 'values', 'headers')),
 				JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
 			);
-			header("HX-Location: $attributes");
+			$this->headers->setHeader('HX-Location', $attributes);
 			return;
 		}
-		header("HX-Redirect: $url");
+		header("HX-Redirect: {$url}");
 	}
 
 	/**
 	 * the client side will do a full refresh of the page
 	 *
+	 * @param bool $value
 	 * @return void
 	 */
-	private function refreshClient(): void
+	private function refreshClient(bool $value = true): void
 	{
-		header('HX-Refresh: true');
+		if (empty($this->headers)) {
+			throw new LogicException('Can not redirect without Headers');
+		}
+		$this->headers->setHeader('HX-Refresh', $value ? 'true' : 'false', true);
 	}
 
 	/**
+	 * Replace the URL in the browser's address bar. This will NOT push into the history stack.
 	 * @param non-empty-string|false $url
 	 * @return void
 	 */
 	private function replaceUrl(string|false $url): void
 	{
+		if (empty($this->headers)) {
+			throw new LogicException('Can not redirect without Headers');
+		}
 		$url = $url ?: "false";
-		header("HX-Replace-Url: $url");
+		$this->headers->setHeader('HX-Replace-Url', $url, true);
 	}
 
 	/**
@@ -89,7 +123,10 @@ trait Htmx
 	 */
 	private function reswap(HtmxSwap $swap): void
 	{
-		header("HX-Reswap: {$swap->value}");
+		if (empty($this->headers)) {
+			throw new LogicException('Can not redirect without Headers');
+		}
+		$this->headers->setHeader('HX-Reswap', $swap->value, true);
 	}
 
 	/**
@@ -100,17 +137,24 @@ trait Htmx
 	 */
 	private function retarget(string $target): void
 	{
-		header("HX-Retarget: $target");
+		if (empty($this->headers)) {
+			throw new LogicException('Can not redirect without Headers');
+		}
+		$this->headers->setHeader('HX-Retarget', $target, true);
 	}
 
 	/**
 	 * @param array<string> $events
 	 * @return void
+	 * @throws JsonException
 	 */
 	private function trigger(array $events): void
 	{
+		if (empty($this->headers)) {
+			throw new LogicException('Can not redirect without Headers');
+		}
 		$encoded = json_encode($events, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
-		header("Hx-Trigger: $encoded");
+		$this->headers->setHeader('HX-Trigger', $encoded, true);
 	}
 
 	/**
@@ -119,10 +163,22 @@ trait Htmx
 	 */
 	private function historyPush(string|false $url): void
 	{
+		if (empty($this->headers)) {
+			throw new LogicException('Can not redirect without Headers');
+		}
 		$url = $url ?: "false";
-		header("HX-Push-Url: $url");
+		$this->headers->setHeader('HX-Push-Url', $url);
 	}
 
+	/**
+	 * @param string $target_id
+	 * @param array<mixed> $withState
+	 * @param string $prependHtml
+	 * @return string
+	 * @throws ContainerExceptionInterface
+	 * @throws Exception
+	 * @throws NotFoundExceptionInterface
+	 */
 	private function rerender(string $target_id, array $withState = [], string $prependHtml = ''): string
 	{
 		$attributes = Attributes::forClass(static::class);
@@ -135,13 +191,14 @@ trait Htmx
 			return $this->serializer->serialize($withState, 'xml');
 		}
 
+		$attribute = null;
 		// look for the name of the component
 		foreach ($attributes->classAttributes as $attribute) {
 			if ($attribute instanceof Component) {
 				$state = implode(
 					' ',
 					array_map(
-						fn($key, $value) => "{$key}=\"{{$value}}\"",
+						static fn($key, $value) => "{$key}=\"{{$value}}\"",
 						array_keys($withState),
 						$withState
 					)
@@ -150,18 +207,22 @@ trait Htmx
 			}
 		}
 
-		if (!is_string($state)) {
-			throw new \LogicException('Can not rerender a non-component');
+		if ($attribute === null || !is_string($state)) {
+			throw new LogicException('Can not rerender a non-component');
 		}
 
 		if (!isset($this->compiler)) {
-			throw new \LogicException('Can not rerender without a compiler');
+			throw new LogicException('Can not rerender without a compiler');
+		}
+		if (empty($this->headers)) {
+			throw new LogicException('Can not rerender without Headers');
 		}
 
-		header('hx-retarget: #' . $target_id);
-		header('hx-reswap: outerHTML');
+		$this->headers->setHeader('HX-Retarget', '#' . $target_id);
+		$this->headers->setHeader('HX-Reswap', 'outerHTML');
+
 		$dom = $this->compiler->compile(
-			"$prependHtml\n<{$attribute->name} id='{{$target_id}}' $state></{$attribute->name}>"
+			"{$prependHtml}\n<{$attribute->name} id='{{$target_id}}' {$state}></{$attribute->name}>"
 		);
 		return $this->compiler->renderCompiledHtml($dom);
 	}

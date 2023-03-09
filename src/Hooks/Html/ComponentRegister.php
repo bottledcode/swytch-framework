@@ -13,9 +13,9 @@ use olvlvl\ComposerAttributeCollector\TargetClass;
 use Psr\Http\Message\ServerRequestInterface;
 
 #[Handler(1)]
-class ComponentRegister implements PreprocessInterface, HandleRequestInterface
+readonly class ComponentRegister implements PreprocessInterface, HandleRequestInterface
 {
-	public function __construct(private readonly Compiler $compiler)
+	public function __construct(private Compiler $compiler)
 	{
 	}
 

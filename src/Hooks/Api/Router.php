@@ -10,9 +10,11 @@ use Bottledcode\SwytchFramework\Router\Exceptions\InvalidRequest;
 use Bottledcode\SwytchFramework\Router\Exceptions\NotFound;
 use Bottledcode\SwytchFramework\Router\Method;
 use Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface;
+use JsonException;
 use Nyholm\Psr7\Uri;
 use olvlvl\ComposerAttributeCollector\Attributes;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Log\LoggerInterface;
 
 #[Handler(priority: 10)]
 class Router extends ApiHandler implements PreprocessInterface
@@ -22,8 +24,10 @@ class Router extends ApiHandler implements PreprocessInterface
 	public const ATTRIBUTE_PATH_ARGS = 'router-path-args';
 	public const ATTRIBUTE_ORIGINAL_URI = 'router-original-uri';
 
-	public function __construct(private readonly StateProviderInterface $stateProvider)
-	{
+	public function __construct(
+		private readonly StateProviderInterface $stateProvider,
+		private readonly LoggerInterface $logger
+	) {
 	}
 
 	public function preprocess(ServerRequestInterface $request, RequestType $type): ServerRequestInterface
@@ -66,12 +70,13 @@ class Router extends ApiHandler implements PreprocessInterface
 				case 'application/json':
 					try {
 						$parsed = json_decode($body, true, flags: JSON_THROW_ON_ERROR);
-					} catch (\JsonException) {
+					} catch (JsonException $exception) {
+						$this->logger->notice('Invalid JSON body', compact('exception', 'body'));
 						$parsed = null;
 					}
 					break;
 				case 'application/x-www-form-urlencoded':
-					$parsed = null;
+					$parsed = [];
 					parse_str($body, $parsed);
 					break;
 				default:

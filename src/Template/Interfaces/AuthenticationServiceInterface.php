@@ -2,8 +2,11 @@
 
 namespace Bottledcode\SwytchFramework\Template\Interfaces;
 
-interface AuthenticationServiceInterface {
+use BackedEnum;
+
+interface AuthenticationServiceInterface
+{
 	public function isAuthenticated(): bool;
 
-	public function isAuthorizedVia(\BackedEnum ...$role): bool;
+	public function isAuthorizedVia(BackedEnum ...$role): bool;
 }

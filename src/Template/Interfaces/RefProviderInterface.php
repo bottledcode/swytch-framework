@@ -5,7 +5,8 @@ namespace Bottledcode\SwytchFramework\Template\Interfaces;
 /**
  * Provides references in the DOM that can be accessed by children of the component
  */
-interface RefProviderInterface {
+interface RefProviderInterface
+{
 	/**
 	 * Create a reference to an item
 	 *

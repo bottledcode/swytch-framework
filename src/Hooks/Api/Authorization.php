@@ -11,7 +11,9 @@ use Bottledcode\SwytchFramework\Router\Exceptions\NotAuthorized;
 use Bottledcode\SwytchFramework\Template\Interfaces\AuthenticationServiceInterface;
 use olvlvl\ComposerAttributeCollector\Attributes;
 use olvlvl\ComposerAttributeCollector\TargetMethod;
+use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 #[Handler(priority: 11)]
@@ -22,6 +24,10 @@ class Authorization extends ApiHandler implements PreprocessInterface
 	{
 	}
 
+	/**
+	 * @throws ContainerExceptionInterface
+	 * @throws NotFoundExceptionInterface
+	 */
 	public function preprocess(ServerRequestInterface $request, RequestType $type): ServerRequestInterface
 	{
 		/**

@@ -7,7 +7,7 @@ class SharedBuilder extends Builder
 	public function shared(): PublicBuilder
 	{
 		return new PublicBuilder(
-			array_merge($this->values, ['public']),
+			[...$this->values, 'public'],
 			$this->etagRequired,
 			$this->score + 2,
 			$this->tag
@@ -16,6 +16,6 @@ class SharedBuilder extends Builder
 
 	public function notShared(): PrivateBuilder
 	{
-		return new PrivateBuilder(array_merge($this->values, ['private']), $this->etagRequired, 0, $this->tag);
+		return new PrivateBuilder([...$this->values, 'private'], $this->etagRequired, 0, $this->tag);
 	}
 }

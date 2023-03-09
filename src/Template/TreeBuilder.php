@@ -8,30 +8,72 @@ use Bottledcode\SwytchFramework\Template\Escapers\Variables;
 use Bottledcode\SwytchFramework\Template\Interfaces\AuthenticationServiceInterface;
 use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
 use Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface;
+use DOMDocumentFragment;
+use DOMElement;
+use DOMException;
 use Laminas\Escaper\Escaper;
+use LogicException;
 use Masterminds\HTML5\Parser\DOMTreeBuilder;
 use olvlvl\ComposerAttributeCollector\Attributes;
+use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
+use Psr\Container\NotFoundExceptionInterface;
 
+/**
+ * This is responsible for tracking the rendering stack and rendering components.
+ */
 class TreeBuilder extends DOMTreeBuilder
 {
 	/**
 	 * @var array<RenderedComponent> The stack of components that are currently being rendered.
 	 */
 	protected static array $componentStack = [];
-	protected \DOMElement|\DOMDocumentFragment $closed;
+
+	/**
+	 * @var DOMElement|DOMDocumentFragment The last closed element
+	 */
+	protected DOMElement|DOMDocumentFragment $closed;
+
+	/**
+	 * @var bool Whether the last closed element was actually closed
+	 */
 	protected bool $actuallyClosed = false;
 
+	/**
+	 * @var StateProviderInterface The state provider
+	 */
 	private readonly StateProviderInterface $stateProvider;
 
+	/**
+	 * @var AuthenticationServiceInterface The authentication service
+	 */
 	private readonly AuthenticationServiceInterface $authenticationService;
 
+	/**
+	 * @var mixed|null The previous $current value
+	 */
+	private mixed $previousCurrent = null;
+
+	/**
+	 * @var string The name of the component we are waiting for when rendering children
+	 */
+	private string $waitingFor = '';
+
+	/**
+	 * @param bool $isFragment
+	 * @param array<mixed> $options
+	 * @param array<string, class-string> $components
+	 * @param Compiler $compiler
+	 * @param ContainerInterface $container
+	 * @throws ContainerExceptionInterface
+	 * @throws NotFoundExceptionInterface
+	 */
 	public function __construct(
 		bool $isFragment,
 		array $options,
-		private array $components,
-		private Compiler $compiler,
-		private ContainerInterface $container,
+		private readonly array $components,
+		private readonly Compiler $compiler,
+		private readonly ContainerInterface $container,
 	) {
 		parent::__construct($isFragment, $options);
 		$this->stateProvider = $this->container->get(StateProviderInterface::class);
@@ -40,27 +82,19 @@ class TreeBuilder extends DOMTreeBuilder
 		}
 	}
 
-	private mixed $previousCurrent = null;
-	private string $waitingFor = '';
-
-	private function collectChildren(string $name): void {
-		$this->waitingFor = $name;
-		$this->previousCurrent = $this->current;
-		$this->current = $this->doc->createDocumentFragment();
-	}
-
-	private function replaceChildren(): void {
-		$this->waitingFor = '';
-		$children = $this->current;
-		$this->current = $this->previousCurrent;
-		end(self::$componentStack)->childList->replaceWith($children->childNodes);
-		$this->previousCurrent = null;
-		array_pop(self::$componentStack);
-	}
-
+	/**
+	 * Called when a tag is opened
+	 *
+	 * @param string $name
+	 * @param array<string> $attributes
+	 * @param bool $selfClosing
+	 * @return int
+	 * @throws ContainerExceptionInterface
+	 * @throws NotFoundExceptionInterface
+	 * @throws DOMException
+	 */
 	public function startTag($name, $attributes = array(), $selfClosing = false)
 	{
-		$this->actuallyClosed = false;
 		$mode = parent::startTag($name, $attributes, $selfClosing);
 		$current = ($selfClosing && $this->actuallyClosed) ? $this->closed : $this->current;
 		if ($name === 'input') {
@@ -69,7 +103,7 @@ class TreeBuilder extends DOMTreeBuilder
 			$current = $this->current->lastChild;
 		}
 
-		if($name === 'children') {
+		if ($name === 'children') {
 			end(self::$componentStack)->childList->children[] = $current;
 		}
 
@@ -83,7 +117,7 @@ class TreeBuilder extends DOMTreeBuilder
 			/** @var EscaperInterface $blobber */
 			$blobber = $this->container->get(EscaperInterface::class);
 			$formAddress = $blobber->replaceBlobs($formAddress, $escaper->escapeUrl(...));
-			if ($formAddress !== null) {
+			if (!empty($formAddress)) {
 				// inject csrf token
 				$token = base64_encode(random_bytes(32));
 				if (!headers_sent()) {
@@ -192,13 +226,15 @@ class TreeBuilder extends DOMTreeBuilder
 			// get the correctly cased names
 			$nameMap = array_combine(array_keys(array_change_key_case($usedAttributes)), array_keys($usedAttributes));
 			$passedAttributes = array_combine(
-				array_map(fn($key) => $nameMap[$key], array_keys($passedAttributes)),
+				array_map(static fn($key) => $nameMap[$key], array_keys($passedAttributes)),
 				$passedAttributes
 			);
 
 			// replace attributes with real values
-			$passedAttributes = array_map(fn($value) => $blobber->replaceBlobs($value ?? true, Variables::escape(...)),
-				$passedAttributes);
+			$passedAttributes = array_map(
+				static fn(string $value) => $blobber->replaceBlobs($value, Variables::escape(...)),
+				$passedAttributes
+			);
 
 			self::$componentStack[] = new RenderedComponent($component, $passedAttributes, $id);
 
@@ -212,12 +248,12 @@ class TreeBuilder extends DOMTreeBuilder
 				$last = null;
 				foreach ($content->childNodes as $node) {
 					$nodes[] = $node;
-					if ($node instanceof \DOMElement || $node instanceof \DOMDocumentFragment) {
+					if ($node instanceof DOMElement || $node instanceof DOMDocumentFragment) {
 						$last = $node;
 					}
 				}
 				if ($last === null) {
-					throw new \LogicException('No element found in component content.');
+					throw new LogicException('No element found in component content.');
 				}
 				$this->current = $last;
 				$current->before(...$nodes);
@@ -226,7 +262,7 @@ class TreeBuilder extends DOMTreeBuilder
 				$current->appendChild($content);
 			}
 
-			if(!$selfClosing) {
+			if (!$selfClosing) {
 				$this->collectChildren($name);
 			} else {
 				array_pop(self::$componentStack);
@@ -244,21 +280,42 @@ class TreeBuilder extends DOMTreeBuilder
 		);
 	}
 
-	public function endTag($name)
+	private function collectChildren(string $name): void
+	{
+		$this->waitingFor = $name;
+		$this->previousCurrent = $this->current;
+		$this->current = $this->doc->createDocumentFragment();
+	}
+
+	/**
+	 * @param string $name
+	 * @return void
+	 */
+	public function endTag($name): void
 	{
 		// todo: there must be a better way...
-		if($this->waitingFor === $name) {
+		if ($this->waitingFor === $name) {
 			$this->replaceChildren();
 		}
 
 		parent::endTag($name);
 	}
 
+	private function replaceChildren(): void
+	{
+		$this->waitingFor = '';
+		$children = $this->current;
+		$this->current = $this->previousCurrent;
+		end(self::$componentStack)->childList->replaceWith($children->childNodes);
+		$this->previousCurrent = null;
+		array_pop(self::$componentStack);
+	}
+
 	protected function autoclose($tagName)
 	{
 		$this->closed = $this->current;
 		$this->actuallyClosed = true;
-		if($this->waitingFor === $tagName) {
+		if ($this->waitingFor === $tagName) {
 			$this->replaceChildren();
 		}
 		return parent::autoclose($tagName);
