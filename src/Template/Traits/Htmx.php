@@ -46,7 +46,7 @@ trait Htmx
 	private function html(string $html): string
 	{
 		if (empty($this->compiler)) {
-			throw new LogicException('Can not render HTML without a compiler');
+			throw new LogicException('Can not render HTML without a compiler in ' . static::class);
 		}
 
 		$dom = $this->compiler->compile($html);
@@ -74,7 +74,7 @@ trait Htmx
 		array|null $headers = null
 	): void {
 		if (empty($this->headers)) {
-			throw new LogicException('Can not redirect without Headers');
+			throw new LogicException('Can not redirect without Headers in ' . static::class);
 		}
 		if (!empty(array_filter([$handler, $target, $swap, $values, $headers]))) {
 			$attributes = json_encode(
@@ -96,7 +96,7 @@ trait Htmx
 	private function refreshClient(bool $value = true): void
 	{
 		if (empty($this->headers)) {
-			throw new LogicException('Can not redirect without Headers');
+			throw new LogicException('Can not redirect without Headers in ' . static::class);
 		}
 		$this->headers->setHeader('HX-Refresh', $value ? 'true' : 'false', true);
 	}
@@ -109,7 +109,7 @@ trait Htmx
 	private function replaceUrl(string|false $url): void
 	{
 		if (empty($this->headers)) {
-			throw new LogicException('Can not redirect without Headers');
+			throw new LogicException('Can not redirect without Headers in ' . static::class);
 		}
 		$url = $url ?: "false";
 		$this->headers->setHeader('HX-Replace-Url', $url, true);
@@ -124,7 +124,7 @@ trait Htmx
 	private function reswap(HtmxSwap $swap): void
 	{
 		if (empty($this->headers)) {
-			throw new LogicException('Can not redirect without Headers');
+			throw new LogicException('Can not redirect without Headers in ' . static::class);
 		}
 		$this->headers->setHeader('HX-Reswap', $swap->value, true);
 	}
@@ -138,7 +138,7 @@ trait Htmx
 	private function retarget(string $target): void
 	{
 		if (empty($this->headers)) {
-			throw new LogicException('Can not redirect without Headers');
+			throw new LogicException('Can not redirect without Headers in ' . static::class);
 		}
 		$this->headers->setHeader('HX-Retarget', $target, true);
 	}
@@ -151,7 +151,7 @@ trait Htmx
 	private function trigger(array $events): void
 	{
 		if (empty($this->headers)) {
-			throw new LogicException('Can not redirect without Headers');
+			throw new LogicException('Can not redirect without Headers in ' . static::class);
 		}
 		$encoded = json_encode($events, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
 		$this->headers->setHeader('HX-Trigger', $encoded, true);
@@ -164,7 +164,7 @@ trait Htmx
 	private function historyPush(string|false $url): void
 	{
 		if (empty($this->headers)) {
-			throw new LogicException('Can not redirect without Headers');
+			throw new LogicException('Can not redirect without Headers in ' . static::class);
 		}
 		$url = $url ?: "false";
 		$this->headers->setHeader('HX-Push-Url', $url);
@@ -208,14 +208,14 @@ trait Htmx
 		}
 
 		if ($attribute === null || !is_string($state)) {
-			throw new LogicException('Can not rerender a non-component');
+			throw new LogicException('Can not rerender a non-component in ' . static::class);
 		}
 
 		if (!isset($this->compiler)) {
-			throw new LogicException('Can not rerender without a compiler');
+			throw new LogicException('Can not rerender without a compiler in ' . static::class);
 		}
 		if (empty($this->headers)) {
-			throw new LogicException('Can not rerender without Headers');
+			throw new LogicException('Can not rerender without Headers in ' . static::class);
 		}
 
 		$this->headers->setHeader('HX-Retarget', '#' . $target_id);
