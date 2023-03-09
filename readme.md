@@ -26,7 +26,7 @@ idea of what the framework is capable of and how it works.
 
 ### [Swytch Todos](https://github.com/bottledcode/swytch-framework-todo-poc/tree/main)
 
-Check it out live on [todos.bottled.codes](https://todos.bottled.codes/). This is an implementation of TodoMVC.
+Check it out live on [todos.getswytch.com](https://todos.getswytch.com/). This is an implementation of TodoMVC.
 
 ### Authentication
 
