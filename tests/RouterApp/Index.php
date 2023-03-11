@@ -16,7 +16,7 @@ class RouterAppIndex {
 	</head>
 <body>
 	<Route path="/" method="GET" render="<Test />" />
-	<Route path="/test/:stuff" method="GET" render="<Test id='blah' stuff=':stuff' />" />
+	<Route path="/test/:stuff" method="GET" render="<Test id='blah' stuff='{{:stuff}}' />" />
 	<DefaultRoute render="<Test />" />
 </body>
 </html>
