@@ -15,7 +15,6 @@ class Test {
 		$style = 'h1 { color: red; }';
 		return <<<HTML
 <div>
-	<style>{{$style}}</style>
 	<h1>{{$stuff}}</h1>
 	<input />
 	<script>

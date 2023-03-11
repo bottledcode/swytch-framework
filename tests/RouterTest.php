@@ -9,10 +9,26 @@ use Bottledcode\SwytchFramework\Template\Functional\Route;
 use function Spatie\Snapshots\assertMatchesHtmlSnapshot;
 use function Spatie\Snapshots\assertMatchesTextSnapshot;
 
+require_once __DIR__ . '/RouterApp/Index.php';
+require_once __DIR__ . '/RouterApp/Test.php';
+
+function routerProvider() {
+	\olvlvl\ComposerAttributeCollector\Attributes::with(fn() => new \olvlvl\ComposerAttributeCollector\Collection(
+		targetClasses: [
+			\Bottledcode\SwytchFramework\Template\Attributes\Component::class => [
+				[['Index'], RouterAppIndex::class],
+				[['Test'], Test::class],
+				[['Route'], Route::class],
+				[['DefaultRoute'], DefaultRoute::class],
+			],
+		],
+		targetMethods: []
+	));
+}
+
 it('can be used to route to other components based on request', function () {
 	$container = getContainer();
 	$compiler = new Compiler(container: $container);
-	require_once __DIR__ . '/RouterApp/Index.php';
 	$compiler->registerComponent(RouterAppIndex::class);
 	$compiler->registerComponent(Route::class);
 	$compiler->registerComponent(DefaultRoute::class);
@@ -28,10 +44,12 @@ it('can be used to route to other components based on request', function () {
 });
 
 it('can render variables', function () {
+	routerProvider();
 	$container = getContainer();
 	$compiler = new Compiler(container: $container);
 	require_once __DIR__ . '/RouterApp/Index.php';
 	$compiler->registerComponent(RouterAppIndex::class);
+	$compiler->registerComponent(Test::class);
 	$compiler->registerComponent(Route::class);
 	$compiler->registerComponent(DefaultRoute::class);
 	$_SERVER['REQUEST_METHOD'] = Method::GET->value;
