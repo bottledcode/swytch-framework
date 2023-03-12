@@ -150,27 +150,14 @@ class LazyTreeBuilder extends DOMTreeBuilder
 		}
 	}
 
-	/**
-	 * @param string $name
-	 * @return void
-	 */
-	public function endTag($name): void
+	private function decorateForm(string $name, array $attributes): void
 	{
-		parent::endTag($name);
-	}
-
-	public function autoclose($tagName): bool
-	{
-		return $this->render($tagName);
-	}
-
-	private function decorateForm(string $name, array $attributes): void {
 		/**
 		 * @var Escaper $escaper
 		 */
 		$escaper = $this->container->get(Escaper::class);
 
-		if($name === 'form') {
+		if ($name === 'form') {
 			$formAddress = $attributes['hx-post'] ?? $attributes['hx-put'] ?? $attributes['hx-delete'] ?? $attributes['hx-patch'] ?? '';
 			/** @var EscaperInterface $blobber */
 			$blobber = $this->container->get(EscaperInterface::class);
@@ -223,34 +210,23 @@ class LazyTreeBuilder extends DOMTreeBuilder
 		}
 	}
 
-	private function shouldRender(string $name): bool {
-		$classAttr = Attributes::forClass($this->components[$name]);
-		foreach ($classAttr->classAttributes as $attr) {
-			if ($attr instanceof Authenticated) {
-				$userAuthenticated = $this->authenticationService->isAuthenticated();
-				switch ([$userAuthenticated, $attr->visible]) {
-					// set to visible and user is authenticated
-					case [true, true]:
-					case [false, false]:
-						break;
-					case [false, true]: // set to visible and user is not authenticated
-					case [true, false]: // set to not visible and user is not authenticated
-						return false;
-				}
-			}
-			if ($attr instanceof Authorized) {
-				$userAuthorized = $this->authenticationService->isAuthorizedVia(...$attr->roles);
-				switch ([$userAuthorized, $attr->visible]) {
-					case [true, true]:
-					case [false, false]:
-						break;
-					case [false, true]:
-					case [true, false]:
-						return false;
-				}
-			}
-		}
-		return true;
+	private function calculateId(int $id): string
+	{
+		return substr('c' . md5((string)$id), 0, 8);
+	}
+
+	/**
+	 * @param string $name
+	 * @return void
+	 */
+	public function endTag($name): void
+	{
+		parent::endTag($name);
+	}
+
+	public function autoclose($tagName): bool
+	{
+		return $this->render($tagName);
 	}
 
 	private function render(string $name): bool
@@ -281,7 +257,10 @@ class LazyTreeBuilder extends DOMTreeBuilder
 				} catch (Throwable $e) {
 					throw new RuntimeException('Error compiling component ' . $component->component, 0, $e);
 				}
-				if (method_exists($this->components[$name], 'removePassedAttributes') && !($this->components[$name])::removePassedAttributes()) {
+				if (method_exists(
+						$this->components[$name],
+						'removePassedAttributes'
+					) && !($this->components[$name])::removePassedAttributes()) {
 					$consumableAttr = [];
 				}
 				$this->attachToDom($compiledDom, $consumableAttr);
@@ -304,9 +283,40 @@ class LazyTreeBuilder extends DOMTreeBuilder
 		return parent::autoclose($name);
 	}
 
+	private function shouldRender(string $name): bool
+	{
+		$classAttr = Attributes::forClass($this->components[$name]);
+		foreach ($classAttr->classAttributes as $attr) {
+			if ($attr instanceof Authenticated) {
+				$userAuthenticated = $this->authenticationService->isAuthenticated();
+				switch ([$userAuthenticated, $attr->visible]) {
+					// set to visible and user is authenticated
+					case [true, true]:
+					case [false, false]:
+						break;
+					case [false, true]: // set to visible and user is not authenticated
+					case [true, false]: // set to not visible and user is not authenticated
+						return false;
+				}
+			}
+			if ($attr instanceof Authorized) {
+				$userAuthorized = $this->authenticationService->isAuthorizedVia(...$attr->roles);
+				switch ([$userAuthorized, $attr->visible]) {
+					case [true, true]:
+					case [false, false]:
+						break;
+					case [false, true]:
+					case [true, false]:
+						return false;
+				}
+			}
+		}
+		return true;
+	}
+
 	private function decorateComponent(CompiledComponent|false $component): void
 	{
-		if($component === false) {
+		if ($component === false) {
 			return;
 		}
 
@@ -320,10 +330,6 @@ class LazyTreeBuilder extends DOMTreeBuilder
 		if ($this->current instanceof DOMElement && !$this->current->hasAttribute('id')) {
 			$this->current->setAttribute('id', $id);
 		}
-	}
-
-	private function calculateId(int $id): string {
-		return substr(md5((string)$id), 0, 8);
 	}
 
 	/**
