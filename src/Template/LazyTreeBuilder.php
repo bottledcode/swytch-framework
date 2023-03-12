@@ -138,16 +138,7 @@ class LazyTreeBuilder extends DOMTreeBuilder
 
 				$this->decorateComponent(end($this->componentStack));
 				$renderedChildren = false;
-				$children = empty($children) ? null : function () use (&$renderedChildren, $children) {
-					$renderedChildren = true;
-					foreach ($children as $child) {
-						$this->current->parentNode->appendChild($child);
-					}
-					$parent = $this->current->parentNode;
-					$parent->removeChild($this->current);
-					$this->current = $parent;
-					return true;
-				};
+				$children = $this->extractChildrenCallable($children, $renderedChildren);
 
 				try {
 					$compiledDom = $component->compile(
@@ -161,31 +152,8 @@ class LazyTreeBuilder extends DOMTreeBuilder
 				} catch (\Throwable $e) {
 					throw new \RuntimeException('Error compiling component ' . $component->component, 0, $e);
 				}
-				if ($compiledDom->childElementCount > 0) {
-					$this->current->appendChild($compiledDom);
-				}
-				if ($this->current instanceof \DOMElement) {
-					foreach ($consumableAttr as $attr => $value) {
-						$this->current->removeAttribute($attr);
-					}
-				}
-				while (count($this->delayStackPointer) && $renderedChildren) {
-					// store the previous state
-					$toRender = array_pop($this->delayStackPointer);
-					$actualCurrent = $this->current;
-					$previousCurrent = $toRender[2];
-					$previousStack = $this->componentStack;
-					$this->componentStack = [$previousCurrent->tagName => $toRender[0]];
-					$this->childParents[] = $toRender[2];
-					$this->current = $previousCurrent;
-
-					// now render the state
-					$this->render($previousCurrent->tagName);
-
-					// restore state
-					$this->current = $actualCurrent;
-					$this->componentStack = $previousStack;
-				}
+				$this->attachToDom($compiledDom, $consumableAttr);
+				$this->renderChildren($renderedChildren);
 
 				if (is_subclass_of($component->component, DataProvider::class)) {
 					array_pop($this->dataProviders);
@@ -197,12 +165,19 @@ class LazyTreeBuilder extends DOMTreeBuilder
 			array_pop($this->componentStack);
 		}
 
-		if ($name === 'children' && is_callable($this->children)) {
-			($this->children)->call($this);
+		if($this->replaceChildren($name)) {
 			return true;
 		}
 
 		return parent::autoclose($name);
+	}
+
+	private function replaceChildren(string $name): true|null {
+		if ($name === 'children' && is_callable($this->children)) {
+			($this->children)->call($this);
+			return true;
+		}
+		return null;
 	}
 
 	private function decorateComponent(CompiledComponent $component): void
@@ -217,5 +192,69 @@ class LazyTreeBuilder extends DOMTreeBuilder
 		if ($this->current instanceof \DOMElement && !$this->current->hasAttribute('id')) {
 			$this->current->setAttribute('id', $id);
 		}
+	}
+
+	/**
+	 * @param bool $renderedChildren
+	 * @return void
+	 */
+	public function renderChildren(bool $renderedChildren): void
+	{
+		while (count($this->delayStackPointer) && $renderedChildren) {
+			// store the previous state
+			$toRender = array_pop($this->delayStackPointer);
+			$actualCurrent = $this->current;
+			$previousCurrent = $toRender[2];
+			$previousStack = $this->componentStack;
+			$this->componentStack = [$previousCurrent->tagName => $toRender[0]];
+			$this->childParents[] = $toRender[2];
+			$this->current = $previousCurrent;
+
+			// now render the state
+			$this->render($previousCurrent->tagName);
+
+			// restore state
+			$this->current = $actualCurrent;
+			$this->componentStack = $previousStack;
+		}
+	}
+
+	/**
+	 * @param $compiledDom
+	 * @param $consumableAttr
+	 * @return void
+	 */
+	public function attachToDom($compiledDom, $consumableAttr): void
+	{
+		if ($compiledDom->childElementCount > 0) {
+			$this->current->appendChild($compiledDom);
+		}
+		if ($this->current instanceof \DOMElement) {
+			foreach ($consumableAttr as $attr => $value) {
+				$this->current->removeAttribute($attr);
+			}
+		}
+	}
+
+	/**
+	 * @param array<\DOMNode> $children
+	 * @param false $renderedChildren
+	 * @return callable|null
+	 */
+	public function extractChildrenCallable(array $children, bool &$renderedChildren): callable|null
+	{
+		if (empty($children)) {
+			return null;
+		}
+		return function () use (&$renderedChildren, $children) {
+			$renderedChildren = true;
+			foreach ($children as $child) {
+				$this->current->parentNode->appendChild($child);
+			}
+			$parent = $this->current->parentNode;
+			$parent->removeChild($this->current);
+			$this->current = $parent;
+			return true;
+		};
 	}
 }
