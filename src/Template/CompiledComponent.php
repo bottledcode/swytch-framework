@@ -19,7 +19,7 @@ use ReflectionClass;
 use ReflectionException;
 use RuntimeException;
 
-readonly class CompiledComponent
+class CompiledComponent
 {
 	public mixed $renderedComponent;
 
@@ -30,9 +30,9 @@ readonly class CompiledComponent
 	 * @param array<string> $attributes
 	 */
 	public function __construct(
-		public string $component,
-		private FactoryInterface $container,
-		private Compiler $compiler,
+		public readonly string $component,
+		private readonly FactoryInterface $container,
+		private readonly Compiler $compiler,
 		public array $attributes = []
 	) {
 	}
@@ -83,6 +83,8 @@ readonly class CompiledComponent
 				}
 			}
 		}
+
+		$this->attributes = $attributes;
 
 		// render the component
 		$rendered = $component->render(...$attributes);
