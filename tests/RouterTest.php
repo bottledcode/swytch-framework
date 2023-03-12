@@ -52,9 +52,9 @@ it('can render variables', function () {
 	$compiler->registerComponent(Test::class);
 	$compiler->registerComponent(Route::class);
 	$compiler->registerComponent(DefaultRoute::class);
-	$_SERVER['REQUEST_METHOD'] = Method::GET->value;
-	$_SERVER['REQUEST_URI'] = '/test/123';
-	$container->set(Route::class, new Route());
+	$request = (new \Nyholm\Psr7\Factory\Psr17Factory())->createServerRequest(Method::GET->value, '/test/123');
+	$container->set(\Psr\Http\Message\ServerRequestInterface::class, $request);
+	$container->set(Route::class, new Route($request));
 	Route::reset();
 
 	$app = $compiler->compileComponent(RouterAppIndex::class);
