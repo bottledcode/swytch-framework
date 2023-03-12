@@ -9,6 +9,7 @@ use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 use Throwable;
 
 readonly class MagicRouter
@@ -39,6 +40,9 @@ readonly class MagicRouter
 
 		try {
 			$request = $hooks->preprocess($request, $requestType);
+			if (method_exists($this->container, 'set')) {
+				$this->container->set(ServerRequestInterface::class, $request);
+			}
 			$response = $hooks->process($request, $requestType, $response);
 			$response = $hooks->postProcess($response, $requestType);
 		} catch (Throwable $e) {
