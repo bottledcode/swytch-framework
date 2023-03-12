@@ -89,7 +89,7 @@ readonly class CompiledComponent
 
 		$this->renderedComponent = $component;
 
-		return $this->compiler->compile($rendered, $children);
+		return $this->compiler->compile($rendered, $children, $this);
 	}
 
 	public function renderAttributes(): array
