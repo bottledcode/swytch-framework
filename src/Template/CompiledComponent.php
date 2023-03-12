@@ -2,7 +2,10 @@
 
 namespace Bottledcode\SwytchFramework\Template;
 
+use Bottledcode\SwytchFramework\Template\Escapers\Variables;
+use Bottledcode\SwytchFramework\Template\Functional\DataProvider;
 use Bottledcode\SwytchFramework\Template\Interfaces\BeforeRenderInterface;
+use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
 use DI\DependencyException;
 use DI\FactoryInterface;
 use DI\NotFoundException;
@@ -24,11 +27,13 @@ readonly class CompiledComponent
 	 * @param class-string $component
 	 * @param FactoryInterface&ContainerInterface $container
 	 * @param Compiler $compiler
+	 * @param array<string> $attributes
 	 */
 	public function __construct(
 		public string $component,
 		private FactoryInterface $container,
-		private Compiler $compiler
+		private Compiler $compiler,
+		public array $attributes = []
 	) {
 	}
 
@@ -45,32 +50,69 @@ readonly class CompiledComponent
 
 	/**
 	 * @param array<string, string> $attributes
+	 * @param callable|null $children
+	 * @param array<DataProvider> $dataProviders
 	 * @return DOMDocument|DOMDocumentFragment
 	 * @throws ContainerExceptionInterface
-	 * @throws NotFoundExceptionInterface
 	 * @throws DependencyException
-	 * @throws NotFoundException
 	 * @throws Exception
+	 * @throws NotFoundException
+	 * @throws NotFoundExceptionInterface
 	 */
-	public function compile(array $attributes = []): DOMDocument|DOMDocumentFragment
-	{
+	public function compile(
+		array $attributes = [],
+		callable|null $children = null,
+		array $dataProviders = []
+	): DOMDocument|DOMDocumentFragment {
 		// we are about to render
 		$component = $this->container->make($this->component);
 		if ($component instanceof BeforeRenderInterface) {
 			$component->aboutToRender($attributes);
 		}
 
-		$attributes = array_map(
-			fn($attribute) => str_starts_with($attribute, '__REF__') ? $this->compiler->getRef($attribute) : $attribute,
-			$attributes
-		);
+		$dataProviders = array_filter($dataProviders, fn($x) => !($x instanceof $this));
+
+		if (!empty($dataProviders)) {
+			$newAttributes = array_replace_recursive(
+				...array_map(static fn(DataProvider $x) => $x->provideAttributes(), $dataProviders)
+			);
+			$attributes = array_replace_recursive($attributes, $newAttributes);
+			foreach ($dataProviders as $dataProvider) {
+				foreach ($attributes as &$value) {
+					$value = $dataProvider->provideValues($value);
+				}
+			}
+		}
 
 		// render the component
 		$rendered = $component->render(...$attributes);
 
 		$this->renderedComponent = $component;
 
-		return $this->compiler->compile($rendered);
+		return $this->compiler->compile($rendered, $children);
+	}
+
+	public function renderAttributes(): array
+	{
+		$usedAttributes = $this->getUsedAttributes();
+		$blobber = $this->container->get(EscaperInterface::class);
+		// find parameters we are passing to the component
+		$passedAttributes = array_intersect_key($this->attributes, array_change_key_case($usedAttributes));
+
+		// get the correctly cased names
+		$nameMap = array_combine(array_keys(array_change_key_case($usedAttributes)), array_keys($usedAttributes));
+		$passedAttributes = array_combine(
+			array_map(static fn($key) => $nameMap[$key], array_keys($passedAttributes)),
+			$passedAttributes
+		);
+
+		// replace attributes with real values
+		$passedAttributes = array_map(
+			static fn(string|null $value) => $blobber->replaceBlobs($value ?? true, Variables::escape(...)),
+			$passedAttributes
+		);
+
+		return $passedAttributes;
 	}
 
 	/**

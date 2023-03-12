@@ -15,7 +15,7 @@ class Label
 		$this->begin();
 		?>
         <label for="<?= $for ?>">
-            <children/>
+            <children></children>
         </label>
 		<?php
 		return $this->end();

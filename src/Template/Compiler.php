@@ -7,7 +7,9 @@ use Bottledcode\SwytchFramework\Template\Escapers\Variables;
 use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
 use Bottledcode\SwytchFramework\Template\Interfaces\RefProviderInterface;
 use Bottledcode\SwytchFramework\Template\ReferenceImplementation\SimpleRefProvider;
+use DI\Definition\Exception\InvalidDefinition;
 use DI\FactoryInterface;
+use DI\NotFoundException;
 use DOMDocument;
 use DOMDocumentFragment;
 use Laminas\Escaper\Escaper;
@@ -18,6 +20,8 @@ use olvlvl\ComposerAttributeCollector\TargetClass;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use ReflectionClass;
 use ReflectionException;
 
@@ -34,6 +38,8 @@ final class Compiler
 	private readonly RefProviderInterface $refProvider;
 
 	private readonly EscaperInterface $escaper;
+
+	private readonly LoggerInterface $logger;
 
 	/**
 	 * @param ContainerInterface&FactoryInterface $container
@@ -58,6 +64,11 @@ final class Compiler
 			if (method_exists($this->container, 'set')) {
 				$this->container->set(EscaperInterface::class, $this->escaper);
 			}
+		}
+		try {
+			$this->logger = $this->container->get(LoggerInterface::class);
+		} catch (NotFoundException|InvalidDefinition) {
+			$this->logger = new NullLogger();
 		}
 	}
 
@@ -132,18 +143,19 @@ final class Compiler
 	 * @throws Exception
 	 * @throws NotFoundExceptionInterface
 	 */
-	public function compile(string $html): DOMDocument|DOMDocumentFragment
+	public function compile(string $html, callable|null $children = null): DOMDocument|DOMDocumentFragment
 	{
 		$isFragment = !str_contains($html, '<html');
 
 		$html = $this->escaper->makeBlobs($html);
 
-		$events = new TreeBuilder(
+		$events = new LazyTreeBuilder(
+			$this->container,
+			$this->components,
+			$this->logger,
 			$isFragment,
 			[...self::OPTIONS, 'target_document' => $this->doc],
-			$this->components,
-			$this,
-			$this->container
+			$children
 		);
 		if ($this->doc === null) {
 			$this->doc = $events->document();

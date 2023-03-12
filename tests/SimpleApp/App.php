@@ -13,7 +13,7 @@ class App {
 		return <<<HTML
 <div>
 Your name is {{$name}}.
-<todoItem id="stable" diamond />
+<todoItem id="stable" diamond ></todoItem>
 <blah:label id="labeltest" for="stable">
 This is a label
 </blah:label>
