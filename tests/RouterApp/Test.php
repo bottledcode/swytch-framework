@@ -17,7 +17,13 @@ class Test
 	public function render(int $stuff = 5, int $nesting = 0)
 	{
 		if ($nesting === 0) {
-			return '<p>Test</p>';
+			$this->begin();
+			?>
+            <form hx-post="/somewhere">
+                <input type="text" name="test" value="test">
+            </form>
+			<?php
+			return $this->end();
 		}
 
 		$this->begin();

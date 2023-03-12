@@ -22,7 +22,7 @@ class RouterAppIndex
         </head>
         <body>
         <Route path="/test/:stuff" method="GET">
-            <Test id="blah" stuff="{{:stuff}}" nesting="3"></Test>
+            <Test stuff="{{:stuff}}" nesting="3"></Test>
         </Route>
         <Route path="/" method="GET">
             <p>Test</p>
@@ -34,9 +34,7 @@ class RouterAppIndex
             </script>
         </Route>
         <route path="/form">
-            <form hx-post="/somewhere">
-                <input type="text" name="test" value="test">
-            </form>
+            <test nesting="0"></test>
         </route>
         <DefaultRoute>
             <Test></Test>

@@ -4,12 +4,14 @@ namespace Bottledcode\SwytchFramework\Template;
 
 use Bottledcode\SwytchFramework\Template\Functional\DataProvider;
 use Bottledcode\SwytchFramework\Template\Interfaces\AuthenticationServiceInterface;
+use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
 use Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface;
 use Closure;
 use DI\FactoryInterface;
 use DOMDocumentFragment;
 use DOMElement;
 use DOMNode;
+use Laminas\Escaper\Escaper;
 use LogicException;
 use Masterminds\HTML5\Parser\DOMTreeBuilder;
 use Psr\Container\ContainerExceptionInterface;
@@ -67,6 +69,7 @@ class LazyTreeBuilder extends DOMTreeBuilder
 		bool $isFragment = false,
 		array $options = [],
 		private readonly Closure|null $children = null,
+		private readonly CompiledComponent|null $parentComponent = null,
 	) {
 		parent::__construct($isFragment, $options);
 		$this->stateProvider = $this->container->get(StateProviderInterface::class);
@@ -102,6 +105,8 @@ class LazyTreeBuilder extends DOMTreeBuilder
 		}
 
 		$tag = parent::startTag($name, $attributes, $selfClosing);
+
+		$this->decorateForm($name, $attributes);
 
 		if (!$selfClosing) {
 			$this->pushComponent($name, $attributes);
@@ -153,6 +158,65 @@ class LazyTreeBuilder extends DOMTreeBuilder
 	public function autoclose($tagName): bool
 	{
 		return $this->render($tagName);
+	}
+
+	private function decorateForm(string $name, array $attributes): void {
+		/**
+		 * @var Escaper $escaper
+		 */
+		$escaper = $this->container->get(Escaper::class);
+
+		if($name === 'form') {
+			$formAddress = $attributes['hx-post'] ?? $attributes['hx-put'] ?? $attributes['hx-delete'] ?? $attributes['hx-patch'] ?? '';
+			/** @var EscaperInterface $blobber */
+			$blobber = $this->container->get(EscaperInterface::class);
+			$formAddress = $blobber->replaceBlobs($formAddress, $escaper->escapeUrl(...));
+			if (!empty($formAddress)) {
+				// inject csrf token
+				$token = base64_encode(random_bytes(32));
+				if (!headers_sent()) {
+					setcookie(
+						"csrf_token",
+						$token,
+						[
+							'samesite' => 'strict',
+							'httponly' => true,
+							...(($_SERVER['HTTPS'] ?? false) ? ['secure' => true] : []),
+							'path' => $formAddress
+						]
+					);
+				}
+				$csrfElement = $this->doc->createElement('input');
+				$csrfElement->setAttribute('type', 'hidden');
+				$csrfElement->setAttribute('name', 'csrf_token');
+				$csrfElement->setAttribute('value', $token);
+				$this->current->appendChild($csrfElement);
+
+				// inject the current state of the form and use csrf token to verify/validate
+				$component = end($this->componentStack) ?: $this->parentComponent;
+				$stateData = $this->stateProvider->serializeState($component->attributes);
+
+				$stateElement = $this->doc->createElement('input');
+				$stateElement->setAttribute('type', 'hidden');
+				$stateElement->setAttribute('name', 'state_hash');
+				$stateElement->setAttribute('value', $this->stateProvider->signState($stateData));
+				$this->current->appendChild($stateElement);
+
+				// todo: recreate refs
+				$stateElement = $this->doc->createElement('input');
+				$stateElement->setAttribute('type', 'hidden');
+				$stateElement->setAttribute('name', 'state');
+				$stateElement->setAttribute('value', $stateData);
+				$this->current->appendChild($stateElement);
+
+				// inject the id that will be sent to the server
+				$idElement = $this->doc->createElement('input');
+				$idElement->setAttribute('type', 'hidden');
+				$idElement->setAttribute('name', 'target_id');
+				$idElement->setAttribute('value', $this->calculateId(self::$id));
+				$this->current->appendChild($idElement);
+			}
+		}
 	}
 
 	private function render(string $name): bool
@@ -215,10 +279,14 @@ class LazyTreeBuilder extends DOMTreeBuilder
 				return;
 			}
 		}
-		$id = substr(md5((string)self::$id++), 0, 8);
+		$id = $this->calculateId(++self::$id);
 		if ($this->current instanceof DOMElement && !$this->current->hasAttribute('id')) {
 			$this->current->setAttribute('id', $id);
 		}
+	}
+
+	private function calculateId(int $id): string {
+		return substr(md5((string)$id), 0, 8);
 	}
 
 	/**

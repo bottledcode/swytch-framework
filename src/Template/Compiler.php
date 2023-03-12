@@ -143,7 +143,7 @@ final class Compiler
 	 * @throws Exception
 	 * @throws NotFoundExceptionInterface
 	 */
-	public function compile(string $html, callable|null $children = null): DOMDocument|DOMDocumentFragment
+	public function compile(string $html, callable|null $children = null, CompiledComponent|null $component = null): DOMDocument|DOMDocumentFragment
 	{
 		$isFragment = !str_contains($html, '<html');
 
@@ -155,7 +155,8 @@ final class Compiler
 			$this->logger,
 			$isFragment,
 			[...self::OPTIONS, 'target_document' => $this->doc],
-			$children
+			$children,
+			$component
 		);
 		if ($this->doc === null) {
 			$this->doc = $events->document();
