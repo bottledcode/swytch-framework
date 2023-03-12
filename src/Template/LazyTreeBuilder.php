@@ -2,6 +2,8 @@
 
 namespace Bottledcode\SwytchFramework\Template;
 
+use Bottledcode\SwytchFramework\Template\Attributes\Authenticated;
+use Bottledcode\SwytchFramework\Template\Attributes\Authorized;
 use Bottledcode\SwytchFramework\Template\Functional\DataProvider;
 use Bottledcode\SwytchFramework\Template\Interfaces\AuthenticationServiceInterface;
 use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
@@ -14,6 +16,7 @@ use DOMNode;
 use Laminas\Escaper\Escaper;
 use LogicException;
 use Masterminds\HTML5\Parser\DOMTreeBuilder;
+use olvlvl\ComposerAttributeCollector\Attributes;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
@@ -219,10 +222,40 @@ class LazyTreeBuilder extends DOMTreeBuilder
 		}
 	}
 
+	private function shouldRender(string $name): bool {
+		$classAttr = Attributes::forClass($this->components[$name]);
+		foreach ($classAttr->classAttributes as $attr) {
+			if ($attr instanceof Authenticated) {
+				$userAuthenticated = $this->authenticationService->isAuthenticated();
+				switch ([$userAuthenticated, $attr->visible]) {
+					// set to visible and user is authenticated
+					case [true, true]:
+					case [false, false]:
+						break;
+					case [false, true]: // set to visible and user is not authenticated
+					case [true, false]: // set to not visible and user is not authenticated
+						return false;
+				}
+			}
+			if ($attr instanceof Authorized) {
+				$userAuthorized = $this->authenticationService->isAuthorizedVia(...$attr->roles);
+				switch ([$userAuthorized, $attr->visible]) {
+					case [true, true]:
+					case [false, false]:
+						break;
+					case [false, true]:
+					case [true, false]:
+						return false;
+				}
+			}
+		}
+		return true;
+	}
+
 	private function render(string $name): bool
 	{
 		$component = end($this->componentStack) ?: null;
-		if ($component && key($this->componentStack) === $name) {
+		if ($component && key($this->componentStack) === $name && $this->shouldRender($name)) {
 			$children = $this->current instanceof DOMDocumentFragment ? iterator_to_array(
 				$this->current->childNodes
 			) : [];
