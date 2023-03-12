@@ -19,9 +19,7 @@ class Test
 		if ($nesting === 0) {
 			$this->begin();
 			?>
-            <form hx-post="/somewhere">
-                <input type="text" name="test" value="test">
-            </form>
+            <div>hi</div>
 			<?php
 			return $this->end();
 		}
