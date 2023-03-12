@@ -6,13 +6,14 @@ use Bottledcode\SwytchFramework\Router\Method;
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
 use Bottledcode\SwytchFramework\Template\Interfaces\HxInterface;
 use LogicException;
+use Psr\Http\Message\ServerRequestInterface;
 
 #[Component('Route')]
 class Route implements HxInterface
 {
 	private static bool $foundRoute = false;
 
-	public function __construct()
+	public function __construct(private readonly ServerRequestInterface $request)
 	{
 	}
 
@@ -28,23 +29,18 @@ class Route implements HxInterface
 
 	public function render(string $render, string $path, string|null $method = null): string
 	{
-		// no point in rendering anything if we already found a route
-		if ($this->foundRoute()) {
-			return '';
-		}
-
 		// if no method is specified, assume the route should handle all methods
 		if ($method === null) {
-			$method = $_SERVER['REQUEST_METHOD'];
+			$method = $this->request->getMethod();
 		}
 
 		$method = Method::tryFrom(strtoupper($method)) ?? throw new LogicException('Invalid method: ' . $method);
-		$actualMethod = Method::tryFrom($_SERVER['REQUEST_METHOD']);
+		$actualMethod = Method::tryFrom($this->request->getMethod());
 		if ($actualMethod !== $method) {
 			return '';
 		}
 
-		$actualPath = (string)parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+		$actualPath = $this->request->getUri()->getPath();
 		$actualParts = array_values(array_filter(explode('/', $actualPath)));
 		$parts = array_values(array_filter(explode('/', $path)));
 		if (($numParts = count($actualParts)) !== count($parts)) {
