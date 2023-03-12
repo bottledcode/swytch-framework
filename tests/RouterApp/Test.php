@@ -2,25 +2,33 @@
 
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
 use Bottledcode\SwytchFramework\Template\Traits\Htmx;
+use Bottledcode\SwytchFramework\Template\Traits\RegularPHP;
 
 #[Component('Test')]
-class Test {
+class Test
+{
 	use Htmx;
+	use RegularPHP;
 
-	public function onKeyUp(string $event): void {
+	public function onKeyUp(string $event): void
+	{
 	}
 
-	public function render(string $stuff = '') {
-		$script = "alert('Hello World!')";
-		$style = 'h1 { color: red; }';
-		return <<<HTML
-<div>
-	<h1>{{$stuff}}</h1>
-	<input />
-	<script>
-	{{$script}}
-	</script>
-</div>
-HTML;
+	public function render(int $stuff = 5, int $nesting = 0)
+	{
+		if ($nesting === 0) {
+			return '<p>Test</p>';
+		}
+
+		$this->begin();
+		?>
+
+        <div>
+            <h1>{<?= $stuff ?>}</h1>
+            <test stuff="{<?= $stuff + 1 ?>}" nesting="{<?= $nesting - 1 ?>}"></test>
+        </div>
+
+		<?php
+		return $this->end();
 	}
 }

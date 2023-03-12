@@ -19,7 +19,7 @@ class Index
 <title>{{$title}}</title>
 </head>
 <body>
-<TestApp id="app" name="{{$name}}" />
+<TestApp id="app" name="{{$name}}"></TestApp>
 </body>
 </html>
 HTML;

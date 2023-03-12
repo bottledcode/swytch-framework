@@ -17,6 +17,7 @@ it('renders correctly', function () {
 		targetMethods: []
 	));
 	$compiler = new Compiler($container);
+	$container->set(Compiler::class, $compiler);
 	$compiler->registerComponent(\Bottledcode\SwytchFramework\Tests\SimpleApp\App::class);
 	$compiler->registerComponent(\Bottledcode\SwytchFramework\Tests\SimpleApp\TodoItem::class);
 	$compiler->registerComponent(\Bottledcode\SwytchFramework\Tests\SimpleApp\Label::class);

@@ -9,9 +9,13 @@ use LogicException;
 use Psr\Http\Message\ServerRequestInterface;
 
 #[Component('Route')]
-class Route implements HxInterface
+class Route implements HxInterface, DataProvider
 {
 	private static bool $foundRoute = false;
+	/**
+	 * @var array<string, string>
+	 */
+	public array $variables = [];
 
 	public function __construct(private readonly ServerRequestInterface $request)
 	{
@@ -27,7 +31,7 @@ class Route implements HxInterface
 		return true;
 	}
 
-	public function render(string $render, string $path, string|null $method = null): string
+	public function render(string $path, string|null $method = null): string
 	{
 		// if no method is specified, assume the route should handle all methods
 		if ($method === null) {
@@ -49,7 +53,7 @@ class Route implements HxInterface
 
 		for ($i = 0; $i < $numParts; $i++) {
 			if (str_starts_with($parts[$i], ':')) {
-				$render = str_replace("{{$parts[$i]}}", $actualParts[$i], $render);
+				$this->variables["{{$parts[$i]}}"] = $actualParts[$i];
 			} elseif ($parts[$i] !== $actualParts[$i]) {
 				return '';
 			}
@@ -57,7 +61,17 @@ class Route implements HxInterface
 
 		self::$foundRoute = true;
 
-		return $render;
+		return "<children></children>";
+	}
+
+	public function provideValues(string $value): string
+	{
+		return str_replace(array_keys($this->variables), array_values($this->variables), $value);
+	}
+
+	public function provideAttributes(): array
+	{
+		return [];
 	}
 
 	protected function foundRoute(): bool
