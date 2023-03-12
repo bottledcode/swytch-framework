@@ -10,6 +10,7 @@ use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
 use Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface;
 use Closure;
 use DI\FactoryInterface;
+use DOMDocument;
 use DOMDocumentFragment;
 use DOMElement;
 use DOMNode;
@@ -280,6 +281,9 @@ class LazyTreeBuilder extends DOMTreeBuilder
 				} catch (Throwable $e) {
 					throw new RuntimeException('Error compiling component ' . $component->component, 0, $e);
 				}
+				if (method_exists($this->components[$name], 'removePassedAttributes') && !($this->components[$name])::removePassedAttributes()) {
+					$consumableAttr = [];
+				}
 				$this->attachToDom($compiledDom, $consumableAttr);
 				$this->renderChildren($renderedChildren);
 
@@ -345,11 +349,11 @@ class LazyTreeBuilder extends DOMTreeBuilder
 	}
 
 	/**
-	 * @param DOMDocumentFragment $compiledDom
+	 * @param DOMDocument|DOMDocumentFragment $compiledDom
 	 * @param array<string> $consumableAttr
 	 * @return void
 	 */
-	public function attachToDom(DOMDocumentFragment $compiledDom, array $consumableAttr): void
+	public function attachToDom(DOMDocument|DOMDocumentFragment $compiledDom, array $consumableAttr): void
 	{
 		if ($compiledDom->childElementCount > 0) {
 			$this->current->appendChild($compiledDom);
