@@ -137,9 +137,12 @@ class LazyTreeBuilder extends DOMTreeBuilder
 				$attributes
 			);
 
-			// in a weird quirk of php, this results in appending a new array to the delay stack and they are the same variable.
-			$this->delayStackPointer = &$this->delayStack[];
-			$this->delayStackPointer = [];
+			// only count children we are actually rendering
+			if(count($this->componentStack) === 1) {
+				// in a weird quirk of php, this results in appending a new array to the delay stack and they are the same variable.
+				$this->delayStackPointer = &$this->delayStack[];
+				$this->delayStackPointer = [];
+			}
 
 			// consume children
 			$this->childParents[] = $this->current;
