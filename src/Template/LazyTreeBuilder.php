@@ -121,84 +121,6 @@ class LazyTreeBuilder extends DOMTreeBuilder
 
 	/**
 	 * @param string $name
-	 * @return void
-	 */
-	public function endTag($name): void
-	{
-		parent::endTag($name);
-	}
-
-	public function autoclose($tagName): bool
-	{
-		return $this->render($tagName);
-	}
-
-	/**
-	 * @param array<DOMNode> $children
-	 * @param false $renderedChildren
-	 * @return callable|null
-	 */
-	public function extractChildrenCallable(array $children, bool &$renderedChildren): callable|null
-	{
-		if (empty($children)) {
-			return null;
-		}
-		return function () use (&$renderedChildren, $children) {
-			$renderedChildren = true;
-			foreach ($children as $child) {
-				$this->current->parentNode->appendChild($child);
-			}
-			$parent = $this->current->parentNode;
-			$parent->removeChild($this->current);
-			$this->current = $parent;
-			return true;
-		};
-	}
-
-	/**
-	 * @param DOMDocument|DOMDocumentFragment $compiledDom
-	 * @param array<string> $consumableAttr
-	 * @return void
-	 */
-	public function attachToDom(DOMDocument|DOMDocumentFragment $compiledDom, array $consumableAttr): void
-	{
-		if ($compiledDom->childElementCount > 0) {
-			$this->current->appendChild($compiledDom);
-		}
-		if ($this->current instanceof DOMElement) {
-			foreach ($consumableAttr as $attr => $value) {
-				$this->current->removeAttribute($attr);
-			}
-		}
-	}
-
-	/**
-	 * @param bool $renderedChildren
-	 * @return void
-	 */
-	public function renderChildren(bool $renderedChildren): void
-	{
-		while (count($this->delayStackPointer) && $renderedChildren) {
-			// store the previous state
-			$toRender = array_pop($this->delayStackPointer);
-			$actualCurrent = $this->current;
-			$previousCurrent = $toRender[2];
-			$previousStack = $this->componentStack;
-			$this->componentStack = [$previousCurrent->tagName => $toRender[0]];
-			$this->childParents[] = $toRender[2];
-			$this->current = $previousCurrent;
-
-			// now render the state
-			$this->render($previousCurrent->tagName);
-
-			// restore state
-			$this->current = $actualCurrent;
-			$this->componentStack = $previousStack;
-		}
-	}
-
-	/**
-	 * @param string $name
 	 * @param array<string> $attributes
 	 * @return void
 	 * @throws ContainerExceptionInterface
@@ -293,6 +215,20 @@ class LazyTreeBuilder extends DOMTreeBuilder
 		return substr('c' . md5((string)$id), 0, 8);
 	}
 
+	/**
+	 * @param string $name
+	 * @return void
+	 */
+	public function endTag($name): void
+	{
+		parent::endTag($name);
+	}
+
+	public function autoclose($tagName): bool
+	{
+		return $this->render($tagName);
+	}
+
 	private function render(string $name): bool
 	{
 		$component = end($this->componentStack) ?: null;
@@ -329,7 +265,9 @@ class LazyTreeBuilder extends DOMTreeBuilder
 					) && !($this->components[$name])::removePassedAttributes()) {
 					$consumableAttr = [];
 				}
-				$this->attachToDom($compiledDom, $consumableAttr);
+				if (isset($compiledDom) && isset($consumableAttr)) {
+					$this->attachToDom($compiledDom, $consumableAttr);
+				}
 				$this->renderChildren($renderedChildren);
 
 				if (is_subclass_of($component->component, DataProvider::class)) {
@@ -347,6 +285,46 @@ class LazyTreeBuilder extends DOMTreeBuilder
 		}
 
 		return parent::autoclose($name);
+	}
+
+	private function decorateComponent(CompiledComponent|false $component): void
+	{
+		if ($component === false) {
+			return;
+		}
+
+		if (method_exists($component->component, 'skipHxProcessing')) {
+			$skipHxProcessing = [$component->component, 'skipHxProcessing'];
+			if ($skipHxProcessing()) {
+				return;
+			}
+		}
+		$id = $this->calculateId(++self::$id);
+		if ($this->current instanceof DOMElement && !$this->current->hasAttribute('id')) {
+			$this->current->setAttribute('id', $id);
+		}
+	}
+
+	/**
+	 * @param array<DOMNode> $children
+	 * @param false $renderedChildren
+	 * @return callable|null
+	 */
+	public function extractChildrenCallable(array $children, bool &$renderedChildren): callable|null
+	{
+		if (empty($children)) {
+			return null;
+		}
+		return function () use (&$renderedChildren, $children) {
+			$renderedChildren = true;
+			foreach ($children as $child) {
+				$this->current->parentNode->appendChild($child);
+			}
+			$parent = $this->current->parentNode;
+			$parent->removeChild($this->current);
+			$this->current = $parent;
+			return true;
+		};
 	}
 
 	private function shouldRender(string $name): bool
@@ -380,21 +358,45 @@ class LazyTreeBuilder extends DOMTreeBuilder
 		return true;
 	}
 
-	private function decorateComponent(CompiledComponent|false $component): void
+	/**
+	 * @param DOMDocument|DOMDocumentFragment $compiledDom
+	 * @param array<string> $consumableAttr
+	 * @return void
+	 */
+	public function attachToDom(DOMDocument|DOMDocumentFragment $compiledDom, array $consumableAttr): void
 	{
-		if ($component === false) {
-			return;
+		if ($compiledDom->childElementCount > 0) {
+			$this->current->appendChild($compiledDom);
 		}
-
-		if (method_exists($component->component, 'skipHxProcessing')) {
-			$skipHxProcessing = [$component->component, 'skipHxProcessing'];
-			if ($skipHxProcessing()) {
-				return;
+		if ($this->current instanceof DOMElement) {
+			foreach ($consumableAttr as $attr => $value) {
+				$this->current->removeAttribute($attr);
 			}
 		}
-		$id = $this->calculateId(++self::$id);
-		if ($this->current instanceof DOMElement && !$this->current->hasAttribute('id')) {
-			$this->current->setAttribute('id', $id);
+	}
+
+	/**
+	 * @param bool $renderedChildren
+	 * @return void
+	 */
+	public function renderChildren(bool $renderedChildren): void
+	{
+		while (count($this->delayStackPointer) && $renderedChildren) {
+			// store the previous state
+			$toRender = array_pop($this->delayStackPointer);
+			$actualCurrent = $this->current;
+			$previousCurrent = $toRender[2];
+			$previousStack = $this->componentStack;
+			$this->componentStack = [$previousCurrent->tagName => $toRender[0]];
+			$this->childParents[] = $toRender[2];
+			$this->current = $previousCurrent;
+
+			// now render the state
+			$this->render($previousCurrent->tagName);
+
+			// restore state
+			$this->current = $actualCurrent;
+			$this->componentStack = $previousStack;
 		}
 	}
 
