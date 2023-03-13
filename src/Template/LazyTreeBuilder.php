@@ -27,30 +27,26 @@ use Throwable;
 
 class LazyTreeBuilder extends DOMTreeBuilder
 {
+	public static \WeakMap|null $idMap = null;
 	private static int $id = 0;
-
 	/**
 	 * @var array<CompiledComponent>
 	 */
 	private array $componentStack = [];
-
 	private readonly StateProviderInterface $stateProvider;
 	private readonly AuthenticationServiceInterface|null $authenticationService;
 	/**
 	 * @var array<DOMNode>
 	 */
 	private array $childParents = [];
-
 	/**
 	 * @var array<array<CompiledComponent>>
 	 */
 	private array $delayStack = [];
-
 	/**
 	 * @var array<CompiledComponent>
 	 */
 	private array|null $delayStackPointer = null;
-
 	/**
 	 * @var array<DataProvider>
 	 */
@@ -82,6 +78,7 @@ class LazyTreeBuilder extends DOMTreeBuilder
 		} catch (NotFoundExceptionInterface|ContainerExceptionInterface) {
 			$this->authenticationService = null;
 		}
+		self::$idMap ??= new \WeakMap();
 	}
 
 	/**
@@ -137,8 +134,12 @@ class LazyTreeBuilder extends DOMTreeBuilder
 				$attributes
 			);
 
+			if ($attributes['id'] ?? null) {
+				self::$idMap[$this->componentStack[$name]] = $attributes['id'];
+			}
+
 			// only count children we are actually rendering
-			if(count($this->componentStack) === 1) {
+			if (count($this->componentStack) === 1) {
 				// in a weird quirk of php, this results in appending a new array to the delay stack and they are the same variable.
 				$this->delayStackPointer = &$this->delayStack[];
 				$this->delayStackPointer = [];
@@ -207,15 +208,13 @@ class LazyTreeBuilder extends DOMTreeBuilder
 				$idElement = $this->doc->createElement('input');
 				$idElement->setAttribute('type', 'hidden');
 				$idElement->setAttribute('name', 'target_id');
-				$idElement->setAttribute('value', $this->calculateId(self::$id));
+				$idElement->setAttribute(
+					'value',
+					self::$idMap[$this->parentComponent ?? reset($this->componentStack)] ?? 'null'
+				);
 				$this->current->appendChild($idElement);
 			}
 		}
-	}
-
-	private function calculateId(int $id): string
-	{
-		return substr('c' . md5((string)$id), 0, 8);
 	}
 
 	/**
@@ -304,8 +303,16 @@ class LazyTreeBuilder extends DOMTreeBuilder
 		}
 		$id = $this->calculateId(++self::$id);
 		if ($this->current instanceof DOMElement && !$this->current->hasAttribute('id')) {
+			if ($component = end($this->componentStack)) {
+				self::$idMap[$component] = $id;
+			}
 			$this->current->setAttribute('id', $id);
 		}
+	}
+
+	private function calculateId(int $id): string
+	{
+		return substr('c' . md5((string)$id), 0, 8);
 	}
 
 	/**
