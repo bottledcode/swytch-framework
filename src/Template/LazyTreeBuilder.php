@@ -121,6 +121,84 @@ class LazyTreeBuilder extends DOMTreeBuilder
 
 	/**
 	 * @param string $name
+	 * @return void
+	 */
+	public function endTag($name): void
+	{
+		parent::endTag($name);
+	}
+
+	public function autoclose($tagName): bool
+	{
+		return $this->render($tagName);
+	}
+
+	/**
+	 * @param array<DOMNode> $children
+	 * @param false $renderedChildren
+	 * @return callable|null
+	 */
+	public function extractChildrenCallable(array $children, bool &$renderedChildren): callable|null
+	{
+		if (empty($children)) {
+			return null;
+		}
+		return function () use (&$renderedChildren, $children) {
+			$renderedChildren = true;
+			foreach ($children as $child) {
+				$this->current->parentNode->appendChild($child);
+			}
+			$parent = $this->current->parentNode;
+			$parent->removeChild($this->current);
+			$this->current = $parent;
+			return true;
+		};
+	}
+
+	/**
+	 * @param DOMDocument|DOMDocumentFragment $compiledDom
+	 * @param array<string> $consumableAttr
+	 * @return void
+	 */
+	public function attachToDom(DOMDocument|DOMDocumentFragment $compiledDom, array $consumableAttr): void
+	{
+		if ($compiledDom->childElementCount > 0) {
+			$this->current->appendChild($compiledDom);
+		}
+		if ($this->current instanceof DOMElement) {
+			foreach ($consumableAttr as $attr => $value) {
+				$this->current->removeAttribute($attr);
+			}
+		}
+	}
+
+	/**
+	 * @param bool $renderedChildren
+	 * @return void
+	 */
+	public function renderChildren(bool $renderedChildren): void
+	{
+		while (count($this->delayStackPointer) && $renderedChildren) {
+			// store the previous state
+			$toRender = array_pop($this->delayStackPointer);
+			$actualCurrent = $this->current;
+			$previousCurrent = $toRender[2];
+			$previousStack = $this->componentStack;
+			$this->componentStack = [$previousCurrent->tagName => $toRender[0]];
+			$this->childParents[] = $toRender[2];
+			$this->current = $previousCurrent;
+
+			// now render the state
+			$this->render($previousCurrent->tagName);
+
+			// restore state
+			$this->current = $actualCurrent;
+			$this->componentStack = $previousStack;
+		}
+	}
+
+	/**
+	 * @param string $name
 	 * @param array<string> $attributes
 	 * @return void
 	 * @throws ContainerExceptionInterface
@@ -215,24 +293,10 @@ class LazyTreeBuilder extends DOMTreeBuilder
 		return substr('c' . md5((string)$id), 0, 8);
 	}
 
-	/**
-	 * @param string $name
-	 * @return void
-	 */
-	public function endTag($name): void
-	{
-		parent::endTag($name);
-	}
-
-	public function autoclose($tagName): bool
-	{
-		return $this->render($tagName);
-	}
-
 	private function render(string $name): bool
 	{
 		$component = end($this->componentStack) ?: null;
-		if ($component && key($this->componentStack) === $name && $this->shouldRender($name)) {
+		if ($component && key($this->componentStack) === $name) {
 			$children = $this->current instanceof DOMDocumentFragment ? iterator_to_array(
 				$this->current->childNodes
 			) : [];
@@ -246,13 +310,15 @@ class LazyTreeBuilder extends DOMTreeBuilder
 				$children = $this->extractChildrenCallable($children, $renderedChildren);
 
 				try {
-					$compiledDom = $component->compile(
-						$consumableAttr = $component->renderAttributes(),
-						$children,
-						$this->dataProviders
-					);
-					if ($component->renderedComponent instanceof DataProvider) {
-						$this->dataProviders[] = $component->renderedComponent;
+					if ($this->shouldRender($name)) {
+						$compiledDom = $component->compile(
+							$consumableAttr = $component->renderAttributes(),
+							$children,
+							$this->dataProviders
+						);
+						if ($component->renderedComponent instanceof DataProvider) {
+							$this->dataProviders[] = $component->renderedComponent;
+						}
 					}
 				} catch (Throwable $e) {
 					throw new RuntimeException('Error compiling component ' . $component->component, 0, $e);
@@ -329,70 +395,6 @@ class LazyTreeBuilder extends DOMTreeBuilder
 		$id = $this->calculateId(++self::$id);
 		if ($this->current instanceof DOMElement && !$this->current->hasAttribute('id')) {
 			$this->current->setAttribute('id', $id);
-		}
-	}
-
-	/**
-	 * @param array<DOMNode> $children
-	 * @param false $renderedChildren
-	 * @return callable|null
-	 */
-	public function extractChildrenCallable(array $children, bool &$renderedChildren): callable|null
-	{
-		if (empty($children)) {
-			return null;
-		}
-		return function () use (&$renderedChildren, $children) {
-			$renderedChildren = true;
-			foreach ($children as $child) {
-				$this->current->parentNode->appendChild($child);
-			}
-			$parent = $this->current->parentNode;
-			$parent->removeChild($this->current);
-			$this->current = $parent;
-			return true;
-		};
-	}
-
-	/**
-	 * @param DOMDocument|DOMDocumentFragment $compiledDom
-	 * @param array<string> $consumableAttr
-	 * @return void
-	 */
-	public function attachToDom(DOMDocument|DOMDocumentFragment $compiledDom, array $consumableAttr): void
-	{
-		if ($compiledDom->childElementCount > 0) {
-			$this->current->appendChild($compiledDom);
-		}
-		if ($this->current instanceof DOMElement) {
-			foreach ($consumableAttr as $attr => $value) {
-				$this->current->removeAttribute($attr);
-			}
-		}
-	}
-
-	/**
-	 * @param bool $renderedChildren
-	 * @return void
-	 */
-	public function renderChildren(bool $renderedChildren): void
-	{
-		while (count($this->delayStackPointer) && $renderedChildren) {
-			// store the previous state
-			$toRender = array_pop($this->delayStackPointer);
-			$actualCurrent = $this->current;
-			$previousCurrent = $toRender[2];
-			$previousStack = $this->componentStack;
-			$this->componentStack = [$previousCurrent->tagName => $toRender[0]];
-			$this->childParents[] = $toRender[2];
-			$this->current = $previousCurrent;
-
-			// now render the state
-			$this->render($previousCurrent->tagName);
-
-			// restore state
-			$this->current = $actualCurrent;
-			$this->componentStack = $previousStack;
 		}
 	}
 
