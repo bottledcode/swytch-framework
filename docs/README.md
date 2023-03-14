@@ -6,8 +6,481 @@ API.
 
 ## Getting Started
 
-To get started, install the Swytch Framework using [composer](https://getcomposer.org/):
+The easiest way to get started is to use the [Swytch Template](https://github.com/bottledcode/swytch-template/generate).
+This is a ready-to-go template that you can use to get started with the Swytch Framework.
 
-```bash
-composer require bottledcode/swytch-framework
+The template includes a `Dockerfile` that you can use to build and run your application.
+
+### The Index Component
+
+Every Swytch project requires a 'root component' and in this example, the root component is the `index` component:
+
+```php
+<?php
+#[Component('index')]
+readonly class Index
+{
+	use RegularPHP;
+
+	public function __construct(
+	    private LanguageAcceptor $language, 
+	    private HeadTagFilter $htmlHead
+    ) {}
+
+	public function render()
+	{
+		$this->htmlHead->setTitle('Hello World');
+
+		$this->begin();
+		?>
+        <!DOCTYPE html>
+        <html lang="{<?= $this->language->currentLanguage ?>}">
+        <head>
+        </head>
+        <body>
+        <h1>Hello world</h1>
+        <Route path="/">
+            <Counter></counter>
+        </Route>
+        <DefaultRoute>
+            <h1>404</h1>
+        </defaultroute>
+        </body>
+        </html>
+		<?php
+		return $this->end();
+	}
+}
 ```
+
+This component is the entry point for the web-application and contains the initial HTML that is sent to the browser.
+
+### The Counter Component
+
+The example `counter` component is a simple component that allows 'counting' a variable:
+
+```php
+<?php
+#[Component('counter')]
+readonly class Counter
+{
+	use RegularPHP;
+	use Htmx;
+
+	public function __construct(
+	    private Headers $headers, 
+	    private Compiler $compiler
+    ) {}
+
+	#[Route(Method::POST, '/api/count/add')]
+	public function add(array $state, string $target_id): string
+	{
+		return $this->rerender(
+		    $target_id, 
+		    [...$state, 'count' => ($state['count'] ?? 0) + 1]
+        );
+	}
+
+	#[Route(Method::POST, '/api/count/sub')]
+	public function sub(array $state, string $target_id): string
+	{
+		return $this->rerender(
+		    $target_id, 
+		    [...$state, 'count' => ($state['count'] ?? 0) - 1]
+        );
+	}
+
+	public function render(int $count = 0)
+	{
+		$this->begin();
+		?>
+        <div>
+            <form hx-post="/api/count">
+                <h1>{<?= __('Current count:') ?>} {<?= $count ?>}</h1>
+                <button type="submit" hx-post="/api/count/add"> + </button>
+                <button type="submit" hx-post="/api/count/sub"> - </button>
+            </form>
+        </div>
+		<?php
+		return $this->end();
+	}
+}
+```
+
+## What is this?
+
+The Swytch Framework was created out of frustration with having to create a front-end and back-end for every project.
+Why not write it once? This framework will allow you to write you front-end and back-end in the same language, provide
+an API for non-browser clients, and allow you to deliver value faster than ever.
+
+## How does it work?
+
+Unlike other PHP frameworks with a dedicated templating language, the Swytch Framework's templatating language is HTML5.
+Thus you can take advantage of PHP's built-in templating functionality to create your app. The browser side is powered
+by [htmx](https://htmx.org/).
+
+## Escaping, CSRF, and Security
+
+Looking at the example above, you may be wondering how to prevent XSS attacks. The Swytch Framework
+
+- escapes all output inside `{` brackets `}` automatically.
+- provides a CSRF token on all `<form>` tags.
+
+# Features
+
+## Routing
+
+For components, routing is performed very similar to how you might expect it to work in a Javascript framework with JSX.
+The Swytch Framework uses a built-in `Route` and `DefaultRoute` component to perform routing.
+
+```html
+
+<Route path="/" method="GET">
+    <Home></Home>
+</Route>
+<DefaultRoute>
+    <NotFound></NotFound>
+</DefaultRoute>
+```
+
+The built-in `Route` component is also a `DataProvider` component that allows you to inject the value of route
+parameters:
+
+```html
+
+<Route path="/user/{id}" method="GET">
+    <User id="{{:id}}}"></User>
+</Route>
+```
+
+For API endpoints, routing is performed using the `#[Route]` attribute:
+
+```php
+<?php
+class Example {
+  #[Route(Method::GET, '/api/example/:id')]
+  public function example(string $id) {}
+}
+```
+
+API endpoints also use the Symfony serializer so you can accept complex types as parameters that are composed via route
+parameters and body parameters.
+
+## Context-Aware Escaping
+
+The Swytch Framework automatically escapes all output inside `{` brackets `}` in your HTML. It is fully context-aware,
+so it automatically knows to escape Javascript inside `<script>` tags, HTML inside `<div>` tags, CSS inside `<style>`,
+etc. Unlike other frameworks, you don't have to remember to use the correct escape function inside your HTML.
+
+```php
+<script>console.log('{<?= $userInput ?>}')</script>
+```
+
+## Easy to Reason About
+
+Unlike most frameworks, where you have to dig through layers of directories and files to find the code that is called by
+an API endpoint, you can locate the API endpoint right beside the HTML that calls it. This makes it easy to reason about
+your code and verify correctness during code reviews.
+
+```php
+<?php
+#[Component('counter')]
+readonly class Counter
+{
+    use RegularPHP;
+    use Htmx;
+
+    public function __construct(
+        private Headers $headers, 
+        private Compiler $compiler
+    ) {}
+
+    #[Route(Method::POST, '/api/count/add')]
+    public function add(array $state, string $target_id): string
+    {
+        return $this->rerender(
+            $target_id, 
+            [...$state, 'count' => ($state['count'] ?? 0) + 1]
+        );
+    }
+
+    #[Route(Method::POST, '/api/count/sub')]
+    public function sub(array $state, string $target_id): string
+    {
+        return $this->rerender(
+            $target_id, 
+            [...$state, 'count' => ($state['count'] ?? 0) - 1]
+        );
+    }
+
+    public function render(int $count = 0)
+    {
+        $this->begin();
+        ?>
+        <div>
+            <form hx-post="/api/count">
+                <h1>{<?= __('Current count:') ?>} {<?= $count ?>}</h1>
+                <button type="submit" hx-post="/api/count/add"> + </button>
+                <button type="submit" hx-post="/api/count/sub"> - </button>
+            </form>
+        </div>
+        <?php
+        return $this->end();
+    }
+}
+```
+
+## Performance
+
+Unlike other frameworks and template languages that have to parse and run all the code in your template, the Swytch
+Framework only runs the code that is actually called. This means that your app will likely be faster than conventional
+frameworks. For example, give the following template:
+
+```html
+
+<route path="/">
+    <HugeComponent></HugeComponent>
+</route>
+<DefaultRoute>
+    <NotFound></NotFound>
+</DefaultRoute>
+```
+
+When the user goes to a non-existent page, the Swytch Framework will only run the code inside the `NotFound` component.
+
+## Tamper Protection
+
+The Swytch Framework provides a built-in CSRF token that is automatically added to all `<form>` tags, along with the
+component's current state, signed and validated via a secret key. This is fully pluggable, so you can use your own CSRF
+tokens or even encrypt the state between calls.
+
+## Customizable
+
+The Swytch Framework is fully customizable for your needs. However, it is **not** compatible with PSR middlewares as
+this framework does **not** handle requests like traditional frameworks. Instead a request goes through several phases:
+
+1. The request is parsed and it determines which type of request it is.
+2. Preprocessing: The request is transformed (such as extracting request parameters of API requests).
+3. Processing: The request is transformed into a response (rendering templates or calling API handlers).
+4. Postprocessing: The response is transformed (such as adding headers).
+
+## Authentication/Authorization
+
+The Swytch Framework comes ready for any kind of authentication or authorization you need. For API requests, you can use
+the `Authorized` attribute and for components, there is the `Authorized` and `Authenticated` attributes, allow you to
+show/hide components based on the user's authentication status.
+
+## Translation Aware
+
+The Swytch Framework is translation aware. You can use the `__` function (and friends) to translate strings and define
+translations in a standard `.mo` file. The Swytch Framework will automatically detect the user's language and use the
+correct translation.
+
+# Writing Components
+
+In the Swytch Framework, components are just regular classes decorated by the `Component` attribute and containing
+a `render` function that returns a string. There are several helper traits that you can use to make your life easier,
+such as `RegularPHP` and `Htmx`. These traits provide helper functions for rendering HTML and interfacing with htmx. For
+example, the `RegularPHP` trait provides the `begin` and `end` functions, which allow you to write HTML in a PHP.
+
+Your constructor is called via dependency injection just before rendering, so you can inject any services you need, or
+perform any other initialization. You can also inject the `ServerRequestInterface` to get access to the current request.
+
+The component attribute takes a single argument, which is the name of the component used in HTML.
+
+## Helper Traits for Components
+
+### RegularPHP
+
+The `RegularPHP` trait provides helper functions for rendering HTML via output buffering.
+
+#### `$this->begin()`
+
+Call this function to start output buffering.
+
+#### `$this->end()`
+
+This function returns the contents of the output buffer and stops output buffering.
+
+#### example:
+
+```php
+<?php
+#[Component('example')]
+class Example {
+
+  use RegularPHP;
+
+  public function render() {
+    $this->begin();
+    ?>
+    <h1>Hello world</h1>
+    <?php
+    return $this->end();
+  }
+}
+```
+
+### Htmx
+
+The `Htmx` trait provides helper functions for interfacing with htmx in the browser. It also provides a `rerender`
+function that allows you to rerender a component with the current [state](/state-and-forms).
+
+This trait requires the `Compiler` and `Headers` services to be injected into the component's constructor.
+
+#### `$this->dangerous(string $html)`
+
+This function will dangerously output HTML without escaping it. This is useful for rendering HTML that you know is safe,
+but may contain `{` brackets `}`.
+
+#### `$this->html(string $html)`
+
+This function will render arbitrary HTML and any components. Requires the `Compiler $compiler` to be injected into the
+component constructor.
+
+#### `$this->redirectClient(string $url)`
+
+This function will redirect the client to the given URL. This is useful for redirecting the client after a form is
+submitted.
+
+#### `$this->refreshClient()`
+
+This function will refresh the client's page.
+
+#### `$this->replaceUrl(string $url)`
+
+This function will replace the client's URL with the given URL without affecting the user's history.
+
+#### `$this->reswap(HtmxSwap $swap)`
+
+Change the swapping method for the current request.
+
+#### `$this->retarget(string $target_id)`
+
+Change the target element for the swap
+
+#### `$this->trigger(array $events)`
+
+Trigger the given events on the client.
+
+#### `$this->historyPush(string $url)`
+
+Push the given URL to the client's history.
+
+#### `$this->rerender(string $target_id, array $state, string $prepend_html)`
+
+Rerender the current component with the given state and target id. Any API handler using this can ask for
+the `$target_id` and `$state` parameters to be injected. The prepended HTML will be prepended to the component's HTML,
+which is useful for swapping components out-of-band.
+
+# Guides
+
+## Configuration
+
+There are some key configuration elements configured through environment variables (or overridden through DI):
+
+| environment variable       | default value | description                                          | required |
+|----------------------------|---------------|------------------------------------------------------|----------|
+| SWYTCH_STATE_SECRET        | [NOT SET]     | The secret used to sign the state                    | yes      |
+| SWYTCH_DEFAULT_LANGUAGE    | en            | The default language                                 | no       |
+| SWYTCH_SUPPORTED_LANGUAGES | en            | A comma-separated list of supported languages        | no       |
+| SWYTCH_LANGUAGE_DIR        | [NOT SET]     | The directory where the translation files are stored | no       |
+
+With the exception the internal components of the Component Compiler, all aspects of the Swytch Framework are configured
+through dependency injection which can be configured when constructing an `App` object.
+
+## Attributes
+
+Attributes are handled via `olvlvl/composer-attribute-collector`. This allows attributes to be read from
+a `vendor/attributes.php` file instead of parsing the source code of each class during runtime. While this significantly
+improves runtime performance, you **_must_** remember to run `composer dump` after annotating a new component/class.
+This is not ideal but a necessary evil. If you have a better solution, please let us know. :)
+
+In the meantime, you can use phpstorm file watchers, or some other method to watch `.php` files and run `composer dump`
+when they change.
+
+## State and Forms
+
+Every request in the Swytch Framework is 'stateless', meaning that the state of the application is not stored on the
+webserver. Instead, when you include a `<form>` tag with an `hx-*` attribute, the Swytch Framework will automatically
+add the state of the currently rendering component to the form (along with a CSRF token). The state is signed and
+validated upon submission to prevent users from tampering with the state.
+
+If you wish to be able to pass complex types to components, you can use provide that via the `DataProvider` interface.
+This is how the `Route` component works and passes route parameters to it's children. For example, you could create
+a `UserId` provider that provides the current user's ID, or a User model, to it's rendered children.
+
+Here's a full list of every field attached to a form. If you include fields with the same names, things will probably
+break.
+
+| field name | description                                                |
+|------------|------------------------------------------------------------|
+| csrf_token | A CSRF token to prevent CSRF attacks                       |
+| state      | The attributes passed to the currently rendering component |
+| state_hash | The signature of the state                                 |
+| target_id  | The id of the currently rendering component                |
+
+## Authentication/Authorization
+
+Due to the fact that much of the world uses various means to detect whether the current user is authenticated or not, if
+you wish to use the `Authorized` and `Authenticated` attributes, you must implement the `AuthenticationServiceInterface`
+interface and provide it during the construction of the `App` object.
+
+```php
+<?php
+
+$app = new App(false, [
+    AuthenticationServiceInterface::class => autowire(MyAuthenticationService::class)
+]);
+
+$app->run();
+```
+
+## Headers
+
+PHP provides a `header()` function that allows you to set HTTP headers. However, this function is not very useful for
+unit testing and the Swytch Framework uses PSR Request/Response objects under the hood. To solve this problem, the
+framework provides a `Headers` service that allows you to set headers in a more testable way.
+
+## HTML Head
+
+The `HeadTagFilter` service allows you to hook into the rendering of the `<head>` tag and add your own tags. This is
+extremely useful for adding `<meta>` tags, `<link>` tags, and `<script>` tags, or setting the OpenGraph or Twitter meta
+tags.
+
+## Internationalization
+
+The Swytch Framework considers internationalization as a first-class citizen. The framework uses `gettext/translator`
+under the hood to provide a simple interface for translating strings. The framework also provides a `NumberHalper` class
+to help when dealing with numbers and currencies (such as translating between `0.25` and `0,25`).
+
+Global functions are provided to make it easy to translate strings:
+
+| function name | description                                                    |
+|---------------|----------------------------------------------------------------|
+| __            | Translate a string                                             |
+| noop_         | marks the string for translation but returns it unchanged.     |
+| n__           | Translate a string with a plural form                          |
+| p__           | Translate a string with a context                              |
+| d__           | Translate a string with a domain                               |
+| dp__          | Translate a string with a context and a domain                 |
+| dn__          | Translate a string with a plural form and a domain             |
+| np__          | Translate a string with a plural form and a context            |
+| dnp__         | Translate a string with a plural form, a context, and a domain |
+
+If you are using a translation service, it is recommended to escape the translated string using `{` brackets `}` to
+prevent malicious translators from injecting arbitrary HTML into your application.
+
+## Lifecycle Hooks
+
+If required, you can inject arbitrary behavior via Lifecycle Hooks. These are interfaces and attributes that allow
+fine-grained control over the lifecycle of a request. Every implementing class requires a `#[Handler($priority)]`
+attribute to determine the order in which the handlers are called.
+
+| interfaces                                    | description                                             |
+|-----------------------------------------------|---------------------------------------------------------|
+| `HandleRequestInterface&PreProcessInterface`  | Transform a request before it is sent to a processor    |
+| `HandleRequestInterface&ProcessInterface`     | Process a request and return a response                 |
+| `HandleRequestInterface&PostProcessInterface` | Transform a response before it is sent to the client    |
+| `RequestDeterminatorInterface`                | Determine if the request is an API/Htmx/Browser request |
+| `ExceptionHandlerInterface`                   | Handle unhandled exceptions                             |
