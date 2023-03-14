@@ -98,5 +98,10 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="htmx.org" level="application" />
+    <orderEntry type="library" name="docsify-themeable" level="application" />
+    <orderEntry type="library" name="theme-simple-dark" level="application" />
+    <orderEntry type="library" name="theme-simple" level="application" />
+    <orderEntry type="library" name="mermaid" level="application" />
+    <orderEntry type="library" name="prism-php" level="application" />
   </component>
 </module>
