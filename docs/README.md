@@ -1,8 +1,8 @@
 # The Swytch Framework
 
 The Swytch Framework is a storage-agnostic framework inspired by JSX, Vue, and other Javascript frameworks. It is
-designed to accelerate the development of web applications and APIs by providing a simple, declarative, and powerful
-API.
+designed to accelerate the development of web applications and APIs by providing a simple, declarative, and powerful API
+while writing regular HTML and PHP, powered by [htmx](https://htmx.org/).
 
 ## Getting Started
 
@@ -13,7 +13,7 @@ The template includes a `Dockerfile` that you can use to build and run your appl
 
 ### The Index Component
 
-Every Swytch project requires a 'root component' and in this example, the root component is the `index` component:
+Every Swytch project requires a 'root component' and in this template, the root component is the `index` component:
 
 ```php
 <?php
@@ -39,7 +39,7 @@ readonly class Index
         </head>
         <body>
         <h1>Hello world</h1>
-        <Route path="/">
+        <Route path="/" method="GET">
             <Counter></counter>
         </Route>
         <DefaultRoute>
@@ -121,10 +121,16 @@ by [htmx](https://htmx.org/).
 
 ## Escaping, CSRF, and Security
 
-Looking at the example above, you may be wondering how to prevent XSS attacks. The Swytch Framework
+Looking at the example above, you may be wondering how to prevent XSS attacks. The Swytch Framework automatically
 
 - escapes all output inside `{` brackets `}` automatically.
 - provides a CSRF token on all `<form>` tags.
+
+# Example Applications
+
+The Swytch Application is not yet released, but we felt that this framework is just too awesome to wait for. So, we
+built an example application to show how it works in 'real life'. Check out [once](https://once.getswytch.com) to see
+the framework in action or [view the source](https://github.com/bottledcode/once) to see how it works.
 
 # Features
 
@@ -148,7 +154,7 @@ parameters:
 
 ```html
 
-<Route path="/user/{id}" method="GET">
+<Route path="/user/{:id}" method="GET">
     <User id="{{:id}}}"></User>
 </Route>
 ```
@@ -234,7 +240,7 @@ readonly class Counter
 
 Unlike other frameworks and template languages that have to parse and run all the code in your template, the Swytch
 Framework only runs the code that is actually called. This means that your app will likely be faster than conventional
-frameworks. For example, give the following template:
+frameworks. For example, given the following template:
 
 ```html
 
