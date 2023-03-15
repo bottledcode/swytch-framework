@@ -21,20 +21,15 @@ Features:
 
 ## Example Apps
 
-If you find yourself here before the documentation is complete/released, you can check out these example apps to get an
-idea of what the framework is capable of and how it works.
-
-### [Swytch Todos](https://github.com/bottledcode/swytch-framework-todo-poc/tree/main)
-
-Check it out live on [todos.getswytch.com](https://todos.getswytch.com/). This is an implementation of TodoMVC.
+The following are some example apps using the Swytch Framework:
 
 ### [Once](https://github.com/bottledcode/once)
 
 Check it out live on [once.getswytch.com](https://once.getswytch.com/). This is a secret message app.
 
-### Authentication
+### [Authentication](https://github.com/bottledcode/swytch-auth)
 
-This one isn't open source (yet) but you'll notice it on any of the example apps.
+This app provides a simple authentication system by emailing passwords. It provides Kubernetes ingress authentication.
 
 ## Example Component
 
