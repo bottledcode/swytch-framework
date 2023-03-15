@@ -490,3 +490,36 @@ attribute to determine the order in which the handlers are called.
 | `HandleRequestInterface&PostProcessInterface` | Transform a response before it is sent to the client    |
 | `RequestDeterminatorInterface`                | Determine if the request is an API/Htmx/Browser request |
 | `ExceptionHandlerInterface`                   | Handle unhandled exceptions                             |
+
+## Children
+
+There is a special `Children` component that will inject the children of the current component into the component. This
+can allow rich components, such as modals and dropdowns. Currently, the only way to pass complex objects to these
+children (such as callbacks) is to implement the `DataProvider` interface. (This is how the `Route` component works.)
+
+Example:
+
+```php
+#[Component('example')]
+readonly class ExampleComponent {
+  public function render() {
+    return <<<HTML
+      <div class='i-have-children'>
+        <children></children>
+      </div>
+    HTML;
+  }
+}
+```
+
+# Best Practices
+
+As you may have noticed, the Swytch Framework does not allow you to pass complex objects to child components. This is a
+deliberate design decision to keep components pure. If a component has too much logic that depends on the hierarchy of
+the HTML, then it becomes difficult to test, maintain, and provide a good developer experience. Instead, we recommend
+using stateless components and query caching to improve performance.
+
+For example, if you have a `UserProfile` component that renders a user's profile, you should not pass the user's model
+directly to the component, instead, you should pass the user's ID and perform the query in the component's constructor
+or in the `render()` method. This allows you to easily rerender the component outside of the tree and easily test the
+component.
