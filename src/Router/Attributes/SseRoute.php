@@ -3,12 +3,14 @@
 namespace Bottledcode\SwytchFramework\Router\Attributes;
 
 use Attribute;
+use Bottledcode\SwytchFramework\Router\Method;
 use Closure;
 
 #[Attribute(Attribute::TARGET_METHOD)]
-readonly class SseRoute
+readonly class SseRoute extends Route
 {
-	public function __construct(public Closure $messageGenerator, public int $retryMs = 2000)
+	public function __construct(Method $method, string $path)
 	{
+		parent::__construct($method, $path);
 	}
 }
