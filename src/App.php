@@ -113,7 +113,7 @@ class App
 					get('env.SWYTCH_LANGUAGE_DIR')
 				),
 			Renderer::class => autowire(Renderer::class)->method('setRoot', get('app.root')),
-			LifecyleHooks::class => autowire(LifecyleHooks::class),
+			LifecyleHooks::class => autowire(LifecyleHooks::class)->method('load'),
 			Headers::class => autowire(Headers::class),
 			Psr17Factory::class => autowire(Psr17Factory::class),
 			ServerRequestFactoryInterface::class => autowire(Psr17Factory::class),
