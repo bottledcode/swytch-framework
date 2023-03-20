@@ -73,6 +73,6 @@ class Processor extends Invoker
 			echo "retry: " . $message->retryMs . "\n";
 		}
 		echo "data: " . $message->data . "\n\n";
-		echo ":" . str_repeat(" ", 8096);
+		echo ":" . str_repeat(" ", 8096) . "\n\n";
 	}
 }
