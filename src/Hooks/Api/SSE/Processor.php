@@ -40,7 +40,7 @@ class Processor extends Invoker
 		register_shutdown_function(function () use ($class, $method, $arguments) {
 			// output has already been emitted... so fall back to regular output systems.
 			// send a blank line with enough data so old browser don't choke
-			echo ":" . str_repeat(" ", 8096);
+			echo ":" . str_repeat(" ", 8096) . "\n\n";
 
 			$component = $this->factory->make($class);
 			callback:
