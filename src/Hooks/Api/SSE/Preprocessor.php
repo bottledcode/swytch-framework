@@ -40,6 +40,9 @@ class Preprocessor extends ApiHandler implements PreprocessInterface
 			if ([$targetMethod->class, $targetMethod->name] === [$route->class, $route->name]) {
 				ignore_user_abort(true);
 				set_time_limit(0);
+				ini_set('output_buffering', 'off');
+				ini_set('zlib.output_compression', false);
+				ini_set('implicit_flush', true);
 
 				// X-Accel-Buffering is only needed for Nginx, but it won't hurt on anything else.
 				$this->headers->setHeader('X-Accel-Buffering', 'no');

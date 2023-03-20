@@ -40,7 +40,7 @@ class Processor extends Invoker
 		register_shutdown_function(function () use ($class, $method, $arguments) {
 			// output has already been emitted... so fall back to regular output systems.
 			// send a blank line with enough data so old browser don't choke
-			echo ":" . str_repeat(" ", 2048);
+			echo ":" . str_repeat(" ", 8096);
 
 			$component = $this->factory->make($class);
 			callback:
@@ -48,12 +48,13 @@ class Processor extends Invoker
 			if ($generator instanceof \Generator) {
 				foreach ($generator as $data) {
 					if ($data instanceof SseMessage) {
+						if(connection_aborted()) return;
 						$this->emitMessage($data);
-						continue;
 					}
 				}
 			}
 			if ($generator instanceof SseMessage) {
+				if(connection_aborted()) return;
 				$this->emitMessage($generator);
 				goto callback;
 			}
@@ -72,5 +73,6 @@ class Processor extends Invoker
 			echo "retry: " . $message->retryMs . "\n";
 		}
 		echo "data: " . $message->data . "\n\n";
+		echo ":" . str_repeat(" ", 8096);
 	}
 }
