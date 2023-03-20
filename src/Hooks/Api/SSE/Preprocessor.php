@@ -7,11 +7,13 @@ use Bottledcode\SwytchFramework\Hooks\Api\Invoker;
 use Bottledcode\SwytchFramework\Hooks\Api\Router;
 use Bottledcode\SwytchFramework\Hooks\Common\Headers;
 use Bottledcode\SwytchFramework\Hooks\Handler;
+use Bottledcode\SwytchFramework\Hooks\Html\ComponentRegister;
 use Bottledcode\SwytchFramework\Hooks\PreprocessInterface;
 use Bottledcode\SwytchFramework\Hooks\RequestType;
 use Bottledcode\SwytchFramework\LifecyleHooks;
 use Bottledcode\SwytchFramework\Router\Attributes\Route;
 use Bottledcode\SwytchFramework\Router\Attributes\SseRoute as SseAttribute;
+use Bottledcode\SwytchFramework\Template\Compiler;
 use olvlvl\ComposerAttributeCollector\Attributes;
 use olvlvl\ComposerAttributeCollector\TargetMethod;
 use Psr\Http\Message\ServerRequestInterface;
@@ -25,7 +27,8 @@ class Preprocessor extends ApiHandler implements PreprocessInterface
 		private readonly Headers $headers,
 		private readonly LoggerInterface $logger,
 		private readonly Invoker $invoker,
-		private readonly LifecyleHooks $lifecyleHooks
+		private readonly LifecyleHooks $lifecyleHooks,
+		private readonly Compiler $compiler
 	) {
 	}
 
@@ -55,6 +58,9 @@ class Preprocessor extends ApiHandler implements PreprocessInterface
 				$this->lifecyleHooks->removeProcessor($this->invoker, 10);
 			}
 		}
+
+		$registerComponents = new ComponentRegister($this->compiler);
+		$registerComponents->preprocess($request, $type);
 
 		return $request;
 	}
