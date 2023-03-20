@@ -48,13 +48,17 @@ class Processor extends Invoker
 			if ($generator instanceof \Generator) {
 				foreach ($generator as $data) {
 					if ($data instanceof SseMessage) {
-						if(connection_aborted()) return;
+						if (connection_aborted()) {
+							return;
+						}
 						$this->emitMessage($data);
 					}
 				}
 			}
 			if ($generator instanceof SseMessage) {
-				if(connection_aborted()) return;
+				if (connection_aborted()) {
+					return;
+				}
 				$this->emitMessage($generator);
 				goto callback;
 			}
@@ -72,7 +76,7 @@ class Processor extends Invoker
 		if ($message->retryMs) {
 			echo "retry: " . $message->retryMs . "\n";
 		}
-		echo "data: " . $message->data . "\n\n";
-		echo ":" . str_repeat(" ", 8096) . "\n\n";
+		array_map(static fn($x) => print("data: {$x}\n"), explode("\n", $message->data));
+		echo "\n\n:" . str_repeat(" ", 8096) . "\n\n";
 	}
 }
