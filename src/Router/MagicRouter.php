@@ -28,6 +28,7 @@ readonly class MagicRouter
 		 * @var LifecyleHooks $hooks
 		 */
 		$hooks = $this->container->get(LifecyleHooks::class);
+		$hooks->load();
 		/**
 		 * @var ServerRequestCreatorInterface $requestFactory
 		 */

@@ -87,13 +87,23 @@ class Invoker extends ApiHandler implements ProcessInterface
 			}
 			throw new InvalidRequest('Unsupported parameter type in ' . $route->class . '::' . $route->name);
 		}
-		$component = $this->factory->make($route->class);
-		$result = $componentMethod->invokeArgs($component, $arguments);
+		$result = $this->invoke($route->class, $route->name, $arguments);
 		if (is_string($result)) {
 			return $response->withBody($this->psr17Factory->createStream($result));
-		} elseif ($result instanceof ResponseInterface) {
+		}
+
+		if ($result instanceof ResponseInterface) {
 			return $result;
 		}
+
 		return $response;
+	}
+
+	protected function invoke(
+		string $class,
+		string $method,
+		array $arguments
+	): mixed {
+		return $this->factory->make($class)->$method(...$arguments);
 	}
 }

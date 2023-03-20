@@ -46,6 +46,10 @@ class LifecyleHooks
 		private array $middleware = [],
 		private array $exceptionHandlers = [],
 	) {
+	}
+
+	public function load(): static
+	{
 		$classes = Attributes::findTargetClasses(Handler::class);
 		foreach ($classes as $class) {
 			try {
@@ -71,6 +75,8 @@ class LifecyleHooks
 				continue;
 			}
 		}
+
+		return $this;
 	}
 
 	/**
