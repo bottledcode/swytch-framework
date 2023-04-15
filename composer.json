@@ -47,14 +47,12 @@
     "withinboredom/response-code": "^1.0"
   },
   "require-dev": {
-    "infection/infection": "^0.26.19",
+    "infection/infection": "^0.26",
     "monolog/monolog": "^3.3",
-    "pestphp/pest": "^1.22",
-    "pestphp/pest-plugin-mock": "^1.0",
-    "phpstan/phpstan": "^1.9",
+    "pestphp/pest": "^2.5",
+    "phpstan/phpstan": "^1.10",
     "roave/security-advisories": "dev-latest",
-    "spatie/pest-plugin-snapshots": "^1.1",
-    "pestphp/pest-plugin-parallel": "^1.2"
+    "spatie/pest-plugin-snapshots": "^2.0"
   },
   "suggest": {
     "monolog/monolog": "For logging",
