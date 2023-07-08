@@ -24,6 +24,7 @@ class LanguageAcceptor implements PreprocessInterface, HandleRequestInterface
 	public function __construct(string $locale, array $supportedLocales, protected string $languageDir)
 	{
 		$detectedLocale = array_column(array_map(static fn($x) => explode(';', $x), explode(',', $locale)), 0);
+        $detectedLocale = array_unique(array_merge(...array_map(static fn($x) => [explode('-', $x)[0], $x], $detectedLocale)));
 		$this->currentLanguage = array_values(
 			array_intersect($supportedLocales, $detectedLocale)
 		)[0] ?? $supportedLocales[0];
