@@ -55,7 +55,7 @@ class App
 	public function __construct(
 		protected bool $debug,
 		protected string $indexClass,
-		protected array $dependencyInjection = [],
+		protected array|ContainerInterface $dependencyInjection = [],
 		bool $registerErrorHandler = true
 	) {
 		if ($registerErrorHandler) {
@@ -123,8 +123,10 @@ class App
 			ServerRequestCreatorInterface::class => autowire(ServerRequestCreator::class),
 			ResponseInterface::class => fn(Psr17Factory $factory) => $factory->createResponse(),
 			EmitterInterface::class => autowire(SapiEmitter::class),
-			...$this->dependencyInjection,
+			...(is_array($this->dependencyInjection) ? $this->dependencyInjection : []),
 		]);
+
+		!is_array($this->dependencyInjection) && $builder->wrapContainer($this->dependencyInjection);
 
 		if (!$this->debug) {
 			$builder->enableCompilation('/tmp');
