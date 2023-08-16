@@ -209,9 +209,13 @@ trait Htmx
 			throw new LogicException('Can not rerender without Headers in ' . static::class);
 		}
 
-		$dom = "{$prependHtml}\n<{$attribute->name} {$state}></{$attribute->name}>";
+		$dom = "<{$attribute->name} {$state}></{$attribute->name}>";
 		$doc = $this->compiler->compile($dom);
+		$prepended = $this->compiler->compile($prependHtml);
 		$domFragment = $doc->createDocumentFragment();
+		foreach($prepended->childNodes as $childNode) {
+			$domFragment->appendChild($childNode->cloneNode(true));
+		}
 		foreach($doc->getElementById($fragment)->childNodes as $childNode) {
 			$domFragment->appendChild($childNode->cloneNode(true));
 		}
