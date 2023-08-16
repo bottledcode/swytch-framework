@@ -182,6 +182,42 @@ etc. Unlike other frameworks, you don't have to remember to use the correct esca
 <script>console.log('{<?= $userInput ?>}')</script>
 ```
 
+## Render fragments
+
+The Swytch Framework allows you to render fragments of HTML and components, which is useful when you're processing a
+form. See this essay for more information: https://htmx.org/essays/template-fragments/
+
+```php
+<?ph
+
+#[Component('example')]
+class Example {
+  use \Bottledcode\SwytchFramework\Template\Traits\RegularPHP;
+  use \Bottledcode\SwytchFramework\Template\Traits\Htmx;
+  
+  #[Route(Method::POST, '/api/example')]
+  public function example() {
+    return $this->rerenderFragment('complex fragment', [...$state, 'say' => 'goodbye']);
+  }
+  
+  public function render(string $name, string $say = 'hello') {
+    $this->begin();
+    ?>
+    <div>
+        <h1>Hello world</h1>
+        <fragment hx-target="this" hx-post="/api/example" id="complex fragment">
+        <p>{<?= $say ?>} {<?= $name ?>}</p>
+        </fragment>
+    </div>
+    <?php
+    return $this->end();
+  }
+}
+```
+
+In this example, the `rerenderFragment` function will rerender the component with the given state, but only return the
+fragment to the browser. This prevents cluttering up the source code with a bunch of components that are only used once.
+
 ## Easy to Reason About
 
 Unlike most frameworks, where you have to dig through layers of directories and files to find the code that is called by
@@ -378,6 +414,11 @@ Push the given URL to the client's history.
 Rerender the current component with the given state and target id. Any API handler using this can ask for
 the `$target_id` and `$state` parameters to be injected. The prepended HTML will be prepended to the component's HTML,
 which is useful for swapping components out-of-band.
+
+#### `$this->rerenderFragment(string $fragmentId, array $state, string $prepend_html)`
+
+Rerender the current component with the given state, but returns only the inner html of the fragment. Any HTML in
+the `prepend_html` parameter will always be prepended even if not a part of the fragment.
 
 # Guides
 
