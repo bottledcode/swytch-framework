@@ -170,6 +170,55 @@ trait Htmx
 		$this->headers->setHeader('HX-Push-Url', $url);
 	}
 
+	private function rerenderFragment(string $fragment, array $withState = [], string $prependHtml = ''): string {
+		$attributes = Attributes::forClass(static::class);
+
+		if(isset($this->serializer) && $_SERVER['HTTP_ACCEPT'] === 'application/json') {
+			return $this->serializer->serialize($withState, 'json');
+		}
+
+		if(isset($this->serializer) && $_SERVER['HTTP_ACCEPT'] === 'application/xml') {
+			return $this->serializer->serialize($withState, 'xml');
+		}
+
+		$attribute = null;
+
+		foreach($attributes->classAttributes as $attribute) {
+			if($attribute instanceof Component) {
+				$state = implode(
+					' ',
+					array_map(
+						static fn($key, $value) => "{$key}=\"{{$value}}\"",
+						array_keys($withState),
+						$withState
+					)
+				);
+				break;
+			}
+		}
+
+		if($attribute === null || !is_string($state)) {
+			throw new LogicException('Can not rerender a non-component in ' . static::class);
+		}
+
+		if(!isset($this->compiler)) {
+			throw new LogicException('Can not rerender without a compiler in ' . static::class);
+		}
+
+		if(empty($this->headers)) {
+			throw new LogicException('Can not rerender without Headers in ' . static::class);
+		}
+
+		$dom = "{$prependHtml}\n<{$attribute->name} {$state}></{$attribute->name}>";
+		$doc = $this->compiler->compile($dom);
+		$domFragment = $doc->createDocumentFragment();
+		foreach($doc->getElementById($fragment)->childNodes as $childNode) {
+			$domFragment->appendChild($childNode->cloneNode(true));
+		}
+
+		return $this->compiler->renderCompiledHtml($domFragment);
+	}
+
 	/**
 	 * @param string $target_id
 	 * @param array<mixed> $withState

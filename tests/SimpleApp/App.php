@@ -13,7 +13,9 @@ class App {
 		return <<<HTML
 <div>
 Your name is {{$name}}.
+<fragment id="fragment-test">
 <todoItem id="stable" diamond ></todoItem>
+</fragment>
 <blah:label id="labeltest" for="stable">
 This is a label
 </blah:label>
