@@ -50,8 +50,12 @@ class CompiledComponent
 
 	public function renderFragment(string $id): string {
 		$dom = $this->compile();
+		$fragment = $dom->createDocumentFragment();
+		foreach($dom->getElementById($id)->childNodes as $childNode) {
+			$fragment->appendChild($childNode->cloneNode(true));
+		}
 
-		return $this->compiler->renderCompiledHtml($dom->getElementById($id));
+		return $this->compiler->renderCompiledHtml($fragment);
 	}
 
 	/**
