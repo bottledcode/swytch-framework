@@ -26,12 +26,11 @@ it('renders correctly', function () {
 });
 
 it('fails when missing env vars', function () {
-	expect(fn() =>
-	(new \Bottledcode\SwytchFramework\App(
+	expect(
+		fn() => (new \Bottledcode\SwytchFramework\App(
 			true,
 			\Bottledcode\SwytchFramework\Tests\SimpleApp\App::class,
 			registerErrorHandler: false
 		))->run()
 	)->toThrow(RuntimeException::class);
-
 })->skip();
