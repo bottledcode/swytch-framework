@@ -22,7 +22,32 @@ it('renders correctly', function () {
 	$compiler->registerComponent(\Bottledcode\SwytchFramework\Tests\SimpleApp\TodoItem::class);
 	$compiler->registerComponent(\Bottledcode\SwytchFramework\Tests\SimpleApp\Label::class);
 	$compiled = $compiler->compileComponent(\Bottledcode\SwytchFramework\Tests\SimpleApp\Index::class);
-	\Spatie\Snapshots\assertMatchesHtmlSnapshot($compiled->renderToString());
+	$output = $compiled->renderToString();
+	expect($output)->toMatchHtmlSnapshot();
+});
+
+it('renders fragments correctly', function() {
+	$container = getContainer([
+	]);
+	\olvlvl\ComposerAttributeCollector\Attributes::with(fn() => new \olvlvl\ComposerAttributeCollector\Collection(
+		targetClasses: [
+			\Bottledcode\SwytchFramework\Template\Attributes\Component::class => [
+				[['todoitem'], \Bottledcode\SwytchFramework\Tests\SimpleApp\Index::class],
+				[['TestApp'], \Bottledcode\SwytchFramework\Tests\SimpleApp\App::class],
+				[['TodoItem'], \Bottledcode\SwytchFramework\Tests\SimpleApp\TodoItem::class],
+				[['test:label'], \Bottledcode\SwytchFramework\Tests\SimpleApp\Label::class],
+			],
+		],
+		targetMethods: []
+	));
+	$compiler = new Compiler($container);
+	$container->set(Compiler::class, $compiler);
+	$compiler->registerComponent(\Bottledcode\SwytchFramework\Tests\SimpleApp\App::class);
+	$compiler->registerComponent(\Bottledcode\SwytchFramework\Tests\SimpleApp\TodoItem::class);
+	$compiler->registerComponent(\Bottledcode\SwytchFramework\Tests\SimpleApp\Label::class);
+	$compiled = $compiler->compileComponent(\Bottledcode\SwytchFramework\Tests\SimpleApp\Index::class);
+	$output = $compiled->renderFragment('fragment-test');
+	expect($output)->toMatchHtmlSnapshot();
 });
 
 it('fails when missing env vars', function () {

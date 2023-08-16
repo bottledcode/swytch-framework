@@ -48,6 +48,12 @@ class CompiledComponent
 		return $this->compiler->renderCompiledHtml($dom);
 	}
 
+	public function renderFragment(string $id): string {
+		$dom = $this->compile();
+
+		return $this->compiler->renderCompiledHtml($dom->getElementById($id));
+	}
+
 	/**
 	 * @param array<string, string> $attributes
 	 * @param callable|null $children
