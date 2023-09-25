@@ -34,7 +34,7 @@
     "gettext/translator": "^1.1",
     "laminas/laminas-escaper": "^2.12",
     "masterminds/html5": "^2.7",
-    "olvlvl/composer-attribute-collector": "^1.1",
+    "olvlvl/composer-attribute-collector": "^1.1 || ^2.0",
     "php": ">=8.2",
     "php-di/php-di": "^7.0",
     "psr/container": "2.0.2",
