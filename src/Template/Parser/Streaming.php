@@ -2,6 +2,7 @@
 
 namespace Bottledcode\SwytchFramework\Template\Parser;
 
+use Bottledcode\SwytchFramework\Template\Functional\DataProvider;
 use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
 use Closure;
 use DI\FactoryInterface;
@@ -391,7 +392,7 @@ class Streaming
 		$document = $this->renderTagName($document);
 
 		// at this point, we know everything about the tag, so we can see if we need to render it.
-		if (array_key_exists($this->nameBuffer, $this->components)) {
+		if (array_key_exists(strtolower($this->nameBuffer), $this->components)) {
 			// we can render it, but check to see if we already are rendering a tag
 
 			// prevent us from rendering a nested tag
@@ -402,15 +403,18 @@ class Streaming
 
 			if (empty($this->renderingTag)) {
 				// let's render the tag...
+				$this->nesting = 0;
 				$this->renderingTag = $this->nameBuffer;
 				$this->cutStart = $starting - 1;
 				$this->childrenStart = $document->mark();
 			}
-		}
 
-		// everything is now configured to render the tag, but we only do that now iff the tag is self-closing
-		if ($this->selfClosing) {
-			$this->renderComponent($document);
+			// everything is now configured to render the tag, but we only do that now iff the tag is self-closing
+			if ($this->selfClosing && $this->renderingTag === $this->nameBuffer) {
+				$this->cutEnd = $this->childrenEnd = $document->mark();
+				$document = $this->renderComponent($document);
+				$this->renderingTag = null;
+			}
 		}
 
 		return $document;
@@ -471,24 +475,35 @@ class Streaming
 		return $document->reconsume($this->renderBeforeAttributeName(...));
 	}
 
+	private array $providers = [];
+
 	private function renderComponent(Document $document): Document
 	{
 		$children = substr($document->code, $this->childrenStart, $this->childrenEnd - $this->childrenStart);
-		$componentName = $this->components[$this->renderingTag];
+		$componentName = $this->components[strtolower($this->renderingTag)];
 
 		/**
 		 * @var $component CompiledComponent
 		 */
 		$component = $this->factory->make(
 			CompiledComponent::class,
-			['name' => $this->renderingTag, 'type' => $componentName]
+			['name' => $this->renderingTag, 'type' => $componentName, 'providers' => $this->providers]
 		);
-		$rendering = $component->renderToString(['children' => $children, ...$this->attributes]);
+		$rendering = $component->renderToString($this->attributes);
 		$rendering = $this->blobber->makeBlobs($rendering);
+		// stupid hack to get around the fact that we are lexigraphically parsing the document instead
+		// of creating a tree.
+		$rendering = str_replace(['<children></children>', '<children/>'], $children, $rendering);
+
+		if(class_implements($component->type, DataProvider::class)) {
+			$this->providers[] = $component;
+			$idx = count($this->providers) - 1;
+			$document->onPosition($this->cutEnd, fn() => $this->providers[$idx] = null);
+		}
+
 		$document = $document->snip($this->cutStart, $this->cutEnd)->insert($rendering, $this->cutStart)->seek(
 			$this->cutStart
 		);
-
 
 		return $document;
 	}
@@ -516,7 +531,7 @@ class Streaming
 		}
 
 		// check nesting
-		if (--$this->nesting > 0) {
+		if (--$this->nesting >= 0) {
 			return $document;
 		}
 
@@ -524,7 +539,11 @@ class Streaming
 		$this->cutEnd = $document->mark();
 		$this->childrenEnd = $childrenEnd - 2;
 
-		return $this->renderComponent($document);
+		$document = $this->renderComponent($document);
+
+		$this->renderingTag = null;
+
+		return $document;
 	}
 
 	private function renderDocTypeName(Document $document): Document
