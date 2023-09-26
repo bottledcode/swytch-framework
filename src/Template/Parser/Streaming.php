@@ -2,11 +2,15 @@
 
 namespace Bottledcode\SwytchFramework\Template\Parser;
 
+use Bottledcode\SwytchFramework\Template\Attributes\Authenticated;
+use Bottledcode\SwytchFramework\Template\Attributes\Authorized;
+use Bottledcode\SwytchFramework\Template\Interfaces\AuthenticationServiceInterface;
 use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
+use Closure;
 use DI\FactoryInterface;
 use LogicException;
+use olvlvl\ComposerAttributeCollector\Attributes;
 use olvlvl\ComposerAttributeCollector\TargetClass;
-use Psr\Log\LoggerInterface;
 
 /**
  */
@@ -20,11 +24,18 @@ class Streaming
 	private string|null $nameBuffer = null;
 	private int $childrenStart = 0;
 	private int $childrenEnd = 0;
+	private int $nesting = 0;
+	private array $attributes = [];
+	private string $attributeName = '';
+	private string $attributeValue = '';
+	private bool $selfClosing = false;
+	private int $cutStart = 0;
+	private int $cutEnd = 0;
 
 	public function __construct(
 		public FactoryInterface $factory,
 		private EscaperInterface $escaper,
-		private LoggerInterface $logger
+		private AuthenticationServiceInterface $authenticationService,
 	) {
 	}
 
@@ -42,25 +53,37 @@ class Streaming
 	public function compile(string $code): string
 	{
 		$code = $this->escaper->makeBlobs($code);
-		$document = new Document($code);
+		$document = new Document($code . "\n\n");
 		return $this->renderData($document)->code;
 	}
 
 	private function renderData(Document $document): Document
 	{
 		restartData:
+		$this->resetState();
+
 		$result = match ($document->consume()) {
-			'&' => $this->renderData($this->renderCharacterReference($document)),
+			'&' => $this->renderCharacterReference($document),
 			'<' => $this->renderOpenTag($document),
 			default => null,
 		};
 		if ($result !== null) {
-			return $result;
+			$document = $result;
+			goto restartData;
 		}
 		if ($document->isEof()) {
 			return $document;
 		}
 		goto restartData;
+	}
+
+	private function resetState(): void
+	{
+		$this->selfClosing = false;
+		$this->attributeValue = '';
+		$this->attributeName = '';
+		$this->nameBuffer = '';
+		$this->isClosing = false;
 	}
 
 	private function renderCharacterReference($document): Document
@@ -78,8 +101,9 @@ class Streaming
 		$result = match (strtolower($document->consume())) {
 			'!' => $this->renderDeclarationOpen($document),
 			'/' => $this->renderEndTagOpen($document),
-			'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z' =>
-			$document->reconsume($this->renderTagName(...)),
+			'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z' => $document->reconsume(
+				$this->renderOpenTagName(...)
+			),
 			'?' => $document->reconsume($this->renderBogusComment(...)),
 			default => null,
 		};
@@ -89,7 +113,7 @@ class Streaming
 		if ($document->isEof()) {
 			throw new LogicException('Unexpected end of file');
 		}
-		return $this->renderData($document);
+		return $document;
 	}
 
 	private function renderDeclarationOpen(Document $document): Document
@@ -134,13 +158,13 @@ class Streaming
 			'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' => $document->reconsume(
 				$this->renderDocTypeName(...)
 			),
-			'>' => $this->setQuirksMode(true, fn() => $this->renderData($document)),
+			'>' => $this->setQuirksMode(true, fn() => $document),
 			default => null,
 		};
 		return $result ?? $document->reconsume($this->renderDocTypeName(...));
 	}
 
-	private function setQuirksMode(bool $mode, \Closure $next): Document
+	private function setQuirksMode(bool $mode, Closure $next): Document
 	{
 		$this->quirks = $mode;
 		return $next();
@@ -177,7 +201,7 @@ class Streaming
 	{
 		$result = match ($document->consume()) {
 			']' => $this->renderCDataSectionEnd($document),
-			'>' => $this->renderData($document),
+			'>' => $document,
 			default => null,
 		};
 		if ($result !== null) {
@@ -190,7 +214,7 @@ class Streaming
 	{
 		return match ($document->consume()) {
 			'-' => $this->renderCommentStartDash($document),
-			'>' => $this->renderData($document),
+			'>' => $document,
 			default => $this->renderComment($document),
 		};
 	}
@@ -203,7 +227,7 @@ class Streaming
 
 		return match ($document->consume()) {
 			'-' => $this->renderCommentEnd($document),
-			'>' => $this->renderData($document),
+			'>' => $document,
 			default => $this->renderComment($document),
 		};
 	}
@@ -215,7 +239,7 @@ class Streaming
 		}
 
 		$result = match ($document->consume()) {
-			'>' => $this->renderData($document),
+			'>' => $document,
 			'!' => $this->renderCommentEndBang($document),
 			default => null,
 		};
@@ -231,7 +255,7 @@ class Streaming
 	{
 		$result = match ($document->consume()) {
 			'-' => $this->renderCommentEndDash($document),
-			'>' => $this->renderData($document),
+			'>' => $document,
 			default => null,
 		};
 		if ($result !== null) {
@@ -311,7 +335,7 @@ class Streaming
 	private function renderBogusComment(Document $document): Document
 	{
 		$result = match ($document->consume()) {
-			'>' => $this->renderData($document),
+			'>' => $document,
 			default => null,
 		};
 		if ($result !== null) {
@@ -328,10 +352,10 @@ class Streaming
 		if (ctype_alpha($char = $document->consume())) {
 			$this->nameBuffer = null;
 			$this->isClosing = true;
-			return $document->reconsume($this->renderTagName(...));
+			return $document->reconsume($this->renderTagClosingName(...));
 		}
 		if ($char === '>') {
-			return $this->renderData($document);
+			return $document;
 		}
 		if ($document->isEof()) {
 			throw new LogicException('Unexpected end of file');
@@ -339,12 +363,159 @@ class Streaming
 		return $this->renderBogusComment($document);
 	}
 
+	/**
+	 * This is an alias for renderTagName, but only called when opening a tag
+	 *
+	 * @param Document $document
+	 * @return Document
+	 */
+	private function renderOpenTagName(Document $document): Document
+	{
+		$starting = $document->mark();
+
+		$document = $this->renderTagName($document);
+
+		// at this point, we know everything about the tag, so we can see if we need to render it.
+		if (array_key_exists($this->nameBuffer, $this->components)) {
+			// we can render it, but check to see if we already are rendering a tag
+
+			// prevent us from rendering a nested tag
+			if ($this->renderingTag === $this->nameBuffer) {
+				$this->nesting++;
+				return $document;
+			}
+
+			if (empty($this->renderingTag)) {
+				// let's render the tag...
+				$this->renderingTag = $this->nameBuffer;
+				$this->cutStart = $starting - 1;
+				$this->childrenStart = $document->mark();
+			}
+		}
+
+		// everything is now configured to render the tag, but we only do that now iff the tag is self-closing
+		if ($this->selfClosing) {
+			// todo: render tag
+		}
+
+		return $document;
+	}
+
+	private function renderTagName(Document $document): Document
+	{
+		renderTagName:
+		$result = match ($char = $document->consume()) {
+			"\t", "\n", "\f", " " => $this->renderBeforeAttributeName($document),
+			'>' => $document,
+			'/' => $this->renderSelfClosingStartTag($document),
+			default => null,
+		};
+		if ($result !== null) {
+			return $result;
+		}
+		if ($document->isEof()) {
+			throw new LogicException('Unexpected end of file');
+		}
+
+		$this->nameBuffer .= $char;
+		goto renderTagName;
+	}
+
+	private function renderBeforeAttributeName(Document $document): Document
+	{
+		$oops = function (string $c, Closure $next) use ($document) {
+			$this->attributeName = $c;
+			$this->attributeValue = '';
+			return $next($document);
+		};
+
+		$result = match ($char = $document->consume()) {
+			"\t", "\n", "\f", " " => $this->renderBeforeAttributeName($document),
+			'/' => $document->reconsume($this->renderAfterAttributeName(...)),
+			'=' => $oops($char, $this->renderAttributeName(...)),
+			default => null,
+		};
+		if ($result !== null) {
+			return $result;
+		}
+		$this->attributeName = '';
+		$this->attributeValue = '';
+		return $document->reconsume($this->renderAttributeName(...));
+	}
+
+	private function renderSelfClosingStartTag(Document $document): Document
+	{
+		$char = $document->consume();
+		if ($document->isEof()) {
+			throw new LogicException('Unexpected end of file');
+		}
+		if ($char === '>') {
+			$this->selfClosing = true;
+			return $document;
+		}
+		return $document->reconsume($this->renderBeforeAttributeName(...));
+	}
+
+	/**
+	 * This is an alias for renderTagName, but only called when closing a tag
+	 *
+	 * @param Document $document
+	 * @return Document
+	 */
+	private function renderTagClosingName(Document $document): Document
+	{
+		$childrenEnd = $document->mark();
+
+		$document = $this->renderTagName($document);
+
+		// if we aren't rendering a tag, we are done.
+		if (empty($this->renderingTag)) {
+			return $document;
+		}
+
+		// if we are rendering the current tag
+		if ($this->renderingTag !== $this->nameBuffer) {
+			return $document;
+		}
+
+		// check nesting
+		if (--$this->nesting > 0) {
+			return $document;
+		}
+
+		// everything is in place... render the tag
+		$this->cutEnd = $document->mark();
+		$this->childrenEnd = $childrenEnd - 2;
+
+		return $this->renderComponent($document);
+	}
+
+	private function renderComponent(Document $document): Document
+	{
+		$children = substr($document->code, $this->childrenStart, $this->childrenEnd - $this->childrenStart);
+		$componentName = $this->components[$this->renderingTag];
+
+		/**
+		 * @var $component CompiledComponent
+		 */
+		$component = $this->factory->make(
+			CompiledComponent::class,
+			['name' => $this->renderingTag, 'type' => $componentName]
+		);
+		$rendering = $component->renderToString(['children' => $children, ...$this->attributes]);
+		$rendering = $this->escaper->makeBlobs($rendering);
+		$document = $document->snip($this->cutStart, $this->cutEnd)->insert($rendering, $this->cutStart);
+		$document->seek($this->cutStart);
+
+		return $document;
+	}
+
 	private function renderDocTypeName(Document $document): Document
 	{
 		renderDocTypeName:
 		$result = match ($char = $document->consume()) {
 			"\t", "\n", "\f", " " => $this->renderAfterDocTypeName($document),
-			'>' => $this->renderData($document),
+			'>' => $document,
 			default => null,
 		};
 		if ($result !== null) {
@@ -354,7 +525,6 @@ class Streaming
 			$this->quirks = true;
 			return $document;
 		}
-		$this->docTypeName[] = $char;
 		goto renderDocTypeName;
 	}
 
@@ -362,7 +532,7 @@ class Streaming
 	{
 		$result = match ($document->consume()) {
 			"\t", "\n", "\f", " " => $this->renderAfterDocTypeName($document),
-			'>' => $this->renderData($document),
+			'>' => $document,
 			default => null,
 		};
 		if ($result !== null) {
@@ -392,7 +562,7 @@ class Streaming
 			"\t", "\n", "\f", " " => $this->renderBeforeDocTypePublicIdentifier($document),
 			'"' => $this->renderDocTypePublicIdentifierDoubleQuoted($document),
 			"'" => $this->renderDocTypePublicIdentifierSingleQuoted($document),
-			'>' => $this->setQuirksMode(true, fn() => $this->renderData($document)),
+			'>' => $this->setQuirksMode(true, fn() => $document),
 			default => null,
 		};
 		if ($result !== null) {
@@ -412,7 +582,7 @@ class Streaming
 			"\t", "\n", "\f", " " => $this->renderBeforeDocTypePublicIdentifier($document),
 			'"' => $this->renderDocTypePublicIdentifierDoubleQuoted($document),
 			"'" => $this->renderDocTypePublicIdentifierSingleQuoted($document),
-			'>' => $this->setQuirksMode(true, fn() => $this->renderData($document)),
+			'>' => $this->setQuirksMode(true, fn() => $document),
 			default => null,
 		};
 		if ($result !== null) {
@@ -430,7 +600,7 @@ class Streaming
 	{
 		$result = match ($document->consume()) {
 			'"' => $this->renderAfterDocTypePublicIdentifier($document),
-			'>' => $this->setQuirksMode(true, fn() => $this->renderData($document)),
+			'>' => $this->setQuirksMode(true, fn() => $document),
 			default => null,
 		};
 		if ($result !== null) {
@@ -447,7 +617,7 @@ class Streaming
 	{
 		$result = match ($document->consume()) {
 			"\t", "\n", "\f", " " => $this->renderBetweenDocTypePublicAndSystemIdentifiers($document),
-			'>' => $this->renderData($document),
+			'>' => $document,
 			'"' => $this->renderDocTypeSystemIdentifierDoubleQuoted($document),
 			"'" => $this->renderDocTypeSystemIdentifierSingleQuoted($document),
 			default => null,
@@ -467,7 +637,7 @@ class Streaming
 	{
 		$result = match ($document->consume()) {
 			"\t", "\n", "\f", " " => $this->renderBetweenDocTypePublicAndSystemIdentifiers($document),
-			'>' => $this->renderData($document),
+			'>' => $document,
 			'"' => $this->renderDocTypeSystemIdentifierDoubleQuoted($document),
 			"'" => $this->renderDocTypeSystemIdentifierSingleQuoted($document),
 			default => null,
@@ -487,7 +657,7 @@ class Streaming
 	{
 		$result = match ($document->consume()) {
 			'"' => $this->renderAfterDocTypeSystemIdentifier($document),
-			'>' => $this->setQuirksMode(true, fn() => $this->renderData($document)),
+			'>' => $this->setQuirksMode(true, fn() => $document),
 			default => null,
 		};
 		if ($result !== null) {
@@ -500,7 +670,7 @@ class Streaming
 	{
 		$result = match ($document->consume()) {
 			"\t", "\n", "\f", " " => $this->renderAfterDocTypeSystemIdentifier($document),
-			'>' => $this->renderData($document),
+			'>' => $document,
 			default => null,
 		};
 		if ($result !== null) {
@@ -513,7 +683,7 @@ class Streaming
 	{
 		$result = match ($document->consume()) {
 			"'" => $this->renderAfterDocTypeSystemIdentifier($document),
-			'>' => $this->setQuirksMode(true, fn() => $this->renderData($document)),
+			'>' => $this->setQuirksMode(true, fn() => $document),
 			default => null,
 		};
 		if ($result !== null) {
@@ -526,7 +696,7 @@ class Streaming
 	{
 		$result = match ($document->consume()) {
 			"'" => $this->renderAfterDocTypePublicIdentifier($document),
-			'>' => $this->setQuirksMode(true, fn() => $this->renderData($document)),
+			'>' => $this->setQuirksMode(true, fn() => $document),
 			default => null,
 		};
 		if ($result !== null) {
@@ -545,7 +715,7 @@ class Streaming
 			"\t", "\n", "\f", " " => $this->renderBeforeDocTypeSystemIdentifier($document),
 			'"' => $this->renderDocTypeSystemIdentifierDoubleQuoted($document),
 			"'" => $this->renderDocTypeSystemIdentifierSingleQuoted($document),
-			'>' => $this->setQuirksMode(true, fn() => $this->renderData($document)),
+			'>' => $this->setQuirksMode(true, fn() => $document),
 			default => null,
 		};
 		if ($result !== null) {
@@ -565,7 +735,7 @@ class Streaming
 			"\t", "\n", "\f", " " => $this->renderBeforeDocTypeSystemIdentifier($document),
 			'"' => $this->renderDocTypeSystemIdentifierDoubleQuoted($document),
 			"'" => $this->renderDocTypeSystemIdentifierSingleQuoted($document),
-			'>' => $this->setQuirksMode(true, fn() => $this->renderData($document)),
+			'>' => $this->setQuirksMode(true, fn() => $document),
 			default => null,
 		};
 		if ($result !== null) {
@@ -582,7 +752,7 @@ class Streaming
 	private function renderBogusDocType(Document $document): Document
 	{
 		$result = match ($document->consume()) {
-			'>' => $this->renderData($document),
+			'>' => $document,
 			default => null,
 		};
 		if ($result !== null) {
@@ -592,48 +762,6 @@ class Streaming
 			return $document;
 		}
 		return $this->renderBogusDocType($document);
-	}
-
-	private function renderTagName(Document $document): Document
-	{
-		renderTagName:
-		$result = match ($char = $document->consume()) {
-			"\t", "\n", "\f", " " => $this->renderBeforeAttributeName($document),
-			default => null,
-		};
-		if ($result !== null) {
-			return $result;
-		}
-		if ($document->isEof()) {
-			throw new LogicException('Unexpected end of file');
-		}
-
-		if ($char === '>' && $this->renderingTag === $this->nameBuffer) {
-			$this->childrenRendered($document);
-			return $this->renderData($document);
-		}
-
-		if (($char === '>' || $char === '/') && $this->renderingTag === null && $this->components[$this->nameBuffer] ?? false) {
-			$this->renderingTag = $this->nameBuffer;
-			$this->prepareRender($document);
-			if ($char === '>') {
-				return $this->renderData($document);
-			}
-
-			$this->childrenRendered($document);
-			return $this->renderSelfClosingStartTag($document);
-		}
-
-		if($char === '/') {
-			return $this->renderSelfClosingStartTag($document);
-		}
-
-		if ($char === '>') {
-			return $this->renderData($document);
-		}
-
-		$this->nameBuffer .= $char;
-		goto renderTagName;
 	}
 
 	private function childrenRendered(Document $document): void
@@ -649,51 +777,123 @@ class Streaming
 		$this->childrenStart = $document->mark();
 	}
 
-	private array $attributes = [];
-	private string $attributeName = '';
-	private string|bool $attributeValue = false;
-
-	private function renderBeforeAttributeName(Document $document): Document
+	private function renderAttributeName(Document $document): Document
 	{
-		$oops = function(string $c, \Closure $next) use ($document) {
-			$this->attributeName = $c;
-			$this->attributeValue = '';
-			return $next($document);
+		renderAttributeName:
+		$result = match ($char = $document->consume()) {
+			"\t", "\n", "\f", " ", "/", ">" => $document->reconsume($this->renderAfterAttributeName(...)),
+			'=' => $this->renderBeforeAttributeValue($document),
+			default => null,
 		};
+		if ($result !== null) {
+			return $result;
+		}
+		$this->attributeName .= strtolower($char);
+		goto renderAttributeName;
+	}
 
-		$result = match($char = $document->consume()) {
+	private function renderBeforeAttributeValue(Document $document): Document
+	{
+		return match ($document->consume()) {
+			"\t", "\n", "\f", " " => $this->renderBeforeAttributeValue($document),
+			'"' => $this->renderAttributeValueDoubleQuoted($document),
+			"'" => $this->renderAttributeValueSingleQuoted($document),
+			'>' => (function() use ($document) {
+				$this->attributes[$this->attributeName] = true;
+				return $document;
+			})(),
+			default => $this->renderAttributeValueUnquoted($document),
+		};
+	}
+
+	private function renderAttributeValueDoubleQuoted(Document $document): Document
+	{
+		renderAttributeValueDoubleQuoted:
+		$result = match ($char = $document->consume()) {
+			'"' => $this->renderAfterAttributeValueQuoted($document),
+			'&' => $this->renderAttributeValueDoubleQuoted($this->renderCharacterReference($document)),
+			default => null,
+		};
+		if ($result !== null) {
+			return $result;
+		}
+		if ($document->isEof()) {
+			throw new LogicException('Unexpected end of file');
+		}
+		$this->attributeValue .= $char;
+		goto renderAttributeValueDoubleQuoted;
+	}
+
+	private function renderAfterAttributeValueQuoted(Document $document): Document
+	{
+		$this->attributes[$this->attributeName] = $this->attributeValue;
+
+		$result = match ($document->consume()) {
 			"\t", "\n", "\f", " " => $this->renderBeforeAttributeName($document),
-			'/' => $document->reconsume($this->renderAfterAttributeName(...)),
-			'=' => $oops($char, $this->renderAttributeName(...)),
+			'/' => $this->renderSelfClosingStartTag($document),
+			'>' => $document,
+			default => null,
+		};
+		if ($result !== null) {
+			return $result;
+		}
+		if ($document->isEof()) {
+			throw new LogicException('Unexpected end of file');
+		}
+		return $document->reconsume($this->renderBeforeAttributeName(...));
+	}
+
+	private function renderAttributeValueSingleQuoted(Document $document): Document
+	{
+		renderAttributeValueSingleQuoted:
+		$result = match ($char = $document->consume()) {
+			"'" => $this->renderAfterAttributeValueQuoted($document),
+			'&' => $this->renderAttributeValueSingleQuoted($this->renderCharacterReference($document)),
+			default => null,
+		};
+		if ($result !== null) {
+			return $result;
+		}
+		if ($document->isEof()) {
+			throw new LogicException('Unexpected end of file');
+		}
+		$this->attributeValue .= $char;
+		goto renderAttributeValueSingleQuoted;
+	}
+
+	private function renderAttributeValueUnquoted(Document $document): Document
+	{
+		renderAttributeValueUnquoted:
+		$result = match ($char = $document->consume()) {
+			"\t", "\n", "\f", " " => $this->renderBeforeAttributeName($document),
+			'&' => $this->renderAttributeValueUnquoted($this->renderCharacterReference($document)),
+			'>' => $document,
+			default => null,
+		};
+		if ($result !== null) {
+			return $result;
+		}
+		if ($this->attributes[$this->attributeName] === true) {
+			$this->attributes[$this->attributeName] = '';
+		}
+		$this->attributes[$this->attributeName] .= $char;
+		goto renderAttributeValueUnquoted;
+	}
+
+	private function renderAfterAttributeName(Document $document): Document
+	{
+		$result = match ($document->consume()) {
+			"\t", "\n", "\f", " " => $this->renderAfterAttributeName($document),
+			'/' => $this->renderSelfClosingStartTag($document),
+			'=' => $this->renderBeforeAttributeValue($document),
+			'>' => $document,
 			default => null,
 		};
 		if ($result !== null) {
 			return $result;
 		}
 		$this->attributeName = '';
-		$this->attributeValue = true;
+		$this->attributeValue = '';
 		return $document->reconsume($this->renderAttributeName(...));
-	}
-
-	private function renderAttributeName(Document $document): Document {
-		try {
-			renderAttributeName:
-			$result = match ($char = $document->consume()) {
-				"\t", "\n", "\f", " ", "/", ">" => $document->reconsume($this->renderAfterAttributeName(...)),
-				'=' => $this->renderBeforeAttributeValue($document),
-				default => null,
-			};
-			if ($result !== null) {
-				return $result;
-			}
-			$this->attributeName .= strtolower($char);
-			goto renderAttributeName;
-		} finally {
-			$this->attributes[$this->attributeName] = true;
-		}
-	}
-
-	private function renderAfterAttributeName(Document $document): Document {
-		// todo: next is https://html.spec.whatwg.org/#after-attribute-name-state
 	}
 }
