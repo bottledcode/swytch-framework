@@ -4,18 +4,50 @@ namespace Bottledcode\SwytchFramework\Template\Parser;
 
 use Bottledcode\SwytchFramework\Template\Attributes\Authenticated;
 use Bottledcode\SwytchFramework\Template\Attributes\Authorized;
+use Bottledcode\SwytchFramework\Template\Functional\DataProvider;
 use Bottledcode\SwytchFramework\Template\Interfaces\AuthenticationServiceInterface;
 use DI\Container;
 use olvlvl\ComposerAttributeCollector\Attributes;
 
-readonly class CompiledComponent
+class CompiledComponent
 {
+	public mixed $rawComponent = null;
+
+	/**
+	 * @param string $name
+	 * @param string $type
+	 * @param array<CompiledComponent|null> $providers
+	 * @param AuthenticationServiceInterface $authenticationService
+	 * @param Container $container
+	 */
 	public function __construct(
-		public string $name,
-		public string $type,
-		public AuthenticationServiceInterface $authenticationService,
-		public Container $container
+		public readonly string $name,
+		public readonly string $type,
+		public readonly array $providers,
+		public readonly AuthenticationServiceInterface $authenticationService,
+		public readonly Container $container
 	) {
+	}
+
+	public function renderToString(array $parameters): string
+	{
+		if (!$this->isAuthorized()) {
+			return '';
+		}
+
+		foreach($this->providers as $compiledComponent) {
+			$provider = $compiledComponent?->rawComponent;
+			if($provider instanceof DataProvider) {
+				$parameters = [...$parameters, ...$provider->provideAttributes()];
+				foreach($parameters as $key => &$value) {
+					$value = $provider->provideValues($value);
+				}
+			}
+		}
+
+		$this->rawComponent = $component = $this->container->make($this->type);
+		$rendered = $this->container->call($component->render(...), $parameters);
+		return $rendered;
 	}
 
 	public function isAuthorized(): bool
@@ -47,15 +79,5 @@ readonly class CompiledComponent
 			}
 		}
 		return true;
-	}
-
-	public function renderToString(array $parameters): string {
-		if(!$this->isAuthorized()) {
-			return '';
-		}
-
-		$component = $this->container->make($this->type);
-		$rendered = $this->container->call($component->render(...), $parameters);
-		return $rendered;
 	}
 }

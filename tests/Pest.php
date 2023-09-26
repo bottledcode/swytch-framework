@@ -24,6 +24,9 @@
 |
 */
 
+use Bottledcode\SwytchFramework\Template\Attributes\Component;
+use Bottledcode\SwytchFramework\Template\Escapers\Variables;
+use Bottledcode\SwytchFramework\Template\Interfaces\AuthenticationServiceInterface;
 use Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface;
 use Bottledcode\SwytchFramework\Template\ReferenceImplementation\UnvalidatedStateProvider;
 use Symfony\Component\Serializer\Serializer;
@@ -62,4 +65,47 @@ function getContainer(array $definitionOverride = []): \DI\Container
 		], $definitionOverride)
 	);
 	return $builder->build();
+}
+
+function containerWithComponents(array $components, bool|Closure $authenticated = true): \DI\Container
+{
+	$container = getContainer([
+		AuthenticationServiceInterface::class => new class($authenticated) implements AuthenticationServiceInterface {
+
+			public function __construct(private bool|Closure $authenticated)
+			{
+			}
+
+			public function isAuthenticated(): bool
+			{
+				return is_bool($this->authenticated) ? $this->authenticated : ($this->authenticated)();
+			}
+
+			public function isAuthorizedVia(BackedEnum ...$role): bool
+			{
+				return is_bool($this->authenticated) ? $this->authenticated : ($this->authenticated)();
+			}
+		},
+		\Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface::class => new Variables(),
+	]);
+
+	$streamer = $container->get(\Bottledcode\SwytchFramework\Template\Parser\Streaming::class);
+
+	$targetClasses = [];
+	foreach($components as $name => $component) {
+		$targetClasses[Component::class][] = [[$name], get_class($component)];
+	}
+	$collection = new \olvlvl\ComposerAttributeCollector\Collection(
+		targetClasses: $targetClasses,
+		targetMethods: [],
+		targetProperties: []
+	);
+
+	\olvlvl\ComposerAttributeCollector\Attributes::with(static fn() => $collection);
+
+	foreach($collection->findTargetClasses(Component::class) as $targetClass) {
+		$streamer->registerComponent($targetClass);
+	}
+
+	return $container;
 }

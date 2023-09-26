@@ -6,8 +6,8 @@ use Bottledcode\SwytchFramework\Template\Parser\Streaming;
 use Psr\Log\NullLogger;
 
 it('can parse some basic html', function () {
-	$container = getContainer();
-	$streamer = new Streaming($container, new Variables(), new NullLogger());
+	$container = containerWithComponents([]);
+	$streamer = $container->get(Streaming::class);
 	$document = <<<HTML
 <!DOCTYPE html>
 <html>
@@ -23,55 +23,16 @@ HTML;
 	expect(trim($result))->toBe(trim($document));
 });
 
-#[\Bottledcode\SwytchFramework\Template\Attributes\Component('test')]
-class TestComponent
-{
-	public function render(string $children, string $arg): string
-	{
-		return "Hello {{$arg}} $children";
-	}
-}
-
 it('can render a component', function () {
-	$container = getContainer([
-		AuthenticationServiceInterface::class => new class implements AuthenticationServiceInterface {
-
-			public function isAuthenticated(): bool
-			{
-				return true;
-			}
-
-			public function isAuthorizedVia(BackedEnum ...$role): bool
-			{
-				return true;
-			}
-		},
-		\Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface::class => new Variables(),
-	]);
-	$streamer = $container->get(Streaming::class);
-
 	$class = new class {
-		public function render(string $children, string $arg): string
+		public function render(string $arg): string
 		{
-			return "<div>Hello {{$arg}} $children</div>";
+			return "<div>Hello {{$arg}} <children/></div>";
 		}
 	};
+	$container = containerWithComponents(['test' => $class]);
+	$streamer = $container->get(Streaming::class);
 
-	\olvlvl\ComposerAttributeCollector\Attributes::with(fn() => new \olvlvl\ComposerAttributeCollector\Collection(
-		targetClasses: [
-			\Bottledcode\SwytchFramework\Template\Attributes\Component::class => [
-				[['test'], get_class($class)],
-			],
-		],
-		targetMethods: [],targetProperties: []
-	));
-
-	$streamer->registerComponent(
-		new \olvlvl\ComposerAttributeCollector\TargetClass(
-			new \Bottledcode\SwytchFramework\Template\Attributes\Component('test'),
-			get_class($class),
-		)
-	);
 	$document = <<<HTML
 <test arg="a">person</test>
 HTML;
@@ -82,4 +43,68 @@ HTML;
 <div>Hello a person</div>
 HTML
 	);
+});
+
+it('can render nested components', function() {
+	$parent = new class {
+		public function render(): string
+		{
+			return "<div><child/></div>";
+		}
+	};
+
+	$child = new class {
+		public function render(): string
+		{
+			return "<div>child</div>";
+		}
+	};
+
+	$container = containerWithComponents(['parent' => $parent, 'child' => $child]);
+	$streamer = $container->get(Streaming::class);
+
+	$document = <<<HTML
+<div>I am a <parent/></div>
+HTML;
+
+	$result = $streamer->compile($document);
+
+	expect(trim($result))->toBe(
+		<<<HTML
+<div>I am a <div><div>child</div></div></div>
+HTML);
+});
+
+it('can handle providers', function() {
+	$request = new \Nyholm\Psr7\ServerRequest('GET', 'http://localhost/test/fancy-id');
+	$container = containerWithComponents(['route' => new \Bottledcode\SwytchFramework\Template\Functional\Route($request), 'user' => new class {
+		public function render(string $id): string
+		{
+			return "<div>User {{$id}}</div>";
+		}
+	}]);
+	$container->set(\Psr\Http\Message\ServerRequestInterface::class, $request);
+	$streamer = $container->get(Streaming::class);
+
+	$document= <<<HTML
+<div>
+<route path="/test/:id">
+	<User id="{{:id}}"></User>
+</route>
+<route path="/">test</route>
+</div>
+HTML;
+
+	$result = $streamer->compile($document);
+
+	expect(trim($result))->toBe(
+		<<<HTML
+<div>
+
+	<div>User fancy-id</div>
+
+
+</div>
+HTML);
+
 });
