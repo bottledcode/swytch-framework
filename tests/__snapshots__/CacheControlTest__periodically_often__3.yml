@@ -1,4 +1,0 @@
--
-    - 'Cache-Control: no-cache,public,s-maxage=60'
--
-    - 'ETag: test'

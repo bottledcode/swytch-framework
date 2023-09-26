@@ -4,8 +4,8 @@ namespace Bottledcode\SwytchFramework\Template\Traits;
 
 use Bottledcode\SwytchFramework\Hooks\Common\Headers;
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
-use Bottledcode\SwytchFramework\Template\Compiler;
 use Bottledcode\SwytchFramework\Template\Enum\HtmxSwap;
+use Bottledcode\SwytchFramework\Template\Parser\StreamingCompiler;
 use JsonException;
 use LogicException;
 use Masterminds\HTML5\Exception;
@@ -17,7 +17,7 @@ use Symfony\Component\Serializer\Serializer;
 trait Htmx
 {
 	private readonly Serializer $serializer;
-	private readonly Compiler $compiler;
+	private readonly StreamingCompiler $compiler;
 	private readonly Headers $headers;
 
 	/**
@@ -49,8 +49,7 @@ trait Htmx
 			throw new LogicException('Can not render HTML without a compiler in ' . static::class);
 		}
 
-		$dom = $this->compiler->compile($html);
-		return $this->compiler->renderCompiledHtml($dom);
+		return $this->compiler->compile($html);
 	}
 
 	/**
@@ -168,59 +167,6 @@ trait Htmx
 		}
 		$url = $url ?: "false";
 		$this->headers->setHeader('HX-Push-Url', $url);
-	}
-
-	private function rerenderFragment(string $fragment, array $withState = [], string $prependHtml = ''): string {
-		$attributes = Attributes::forClass(static::class);
-
-		if(isset($this->serializer) && $_SERVER['HTTP_ACCEPT'] === 'application/json') {
-			return $this->serializer->serialize($withState, 'json');
-		}
-
-		if(isset($this->serializer) && $_SERVER['HTTP_ACCEPT'] === 'application/xml') {
-			return $this->serializer->serialize($withState, 'xml');
-		}
-
-		$attribute = null;
-
-		foreach($attributes->classAttributes as $attribute) {
-			if($attribute instanceof Component) {
-				$state = implode(
-					' ',
-					array_map(
-						static fn($key, $value) => "{$key}=\"{{$value}}\"",
-						array_keys($withState),
-						$withState
-					)
-				);
-				break;
-			}
-		}
-
-		if($attribute === null || !is_string($state)) {
-			throw new LogicException('Can not rerender a non-component in ' . static::class);
-		}
-
-		if(!isset($this->compiler)) {
-			throw new LogicException('Can not rerender without a compiler in ' . static::class);
-		}
-
-		if(empty($this->headers)) {
-			throw new LogicException('Can not rerender without Headers in ' . static::class);
-		}
-
-		$dom = "<{$attribute->name} {$state}></{$attribute->name}>";
-		$doc = $this->compiler->compile($dom);
-		$prepended = $this->compiler->compile($prependHtml);
-		$domFragment = $doc->createDocumentFragment();
-		foreach($prepended->childNodes as $childNode) {
-			$domFragment->appendChild($childNode->cloneNode(true));
-		}
-		foreach($doc->getElementById($fragment)->childNodes as $childNode) {
-			$domFragment->appendChild($childNode->cloneNode(true));
-		}
-
-		return $this->compiler->renderCompiledHtml($domFragment);
 	}
 
 	/**

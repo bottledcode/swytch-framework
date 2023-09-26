@@ -1,6 +1,0 @@
--
-    - 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0'
--
-    - 'Expires: Mon, 26 Jul 1997 05:00:00 GMT'
--
-    - 'Pragma: no-cache'

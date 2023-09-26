@@ -2,12 +2,12 @@
 
 use Bottledcode\SwytchFramework\Template\Escapers\Variables;
 use Bottledcode\SwytchFramework\Template\Interfaces\AuthenticationServiceInterface;
-use Bottledcode\SwytchFramework\Template\Parser\Streaming;
+use Bottledcode\SwytchFramework\Template\Parser\StreamingCompiler;
 use Psr\Log\NullLogger;
 
 it('can parse some basic html', function () {
 	$container = containerWithComponents([]);
-	$streamer = $container->get(Streaming::class);
+	$streamer = $container->get(StreamingCompiler::class);
 	$document = <<<HTML
 <!DOCTYPE html>
 <html>
@@ -31,7 +31,7 @@ it('can render a component', function () {
 		}
 	};
 	$container = containerWithComponents(['test' => $class]);
-	$streamer = $container->get(Streaming::class);
+	$streamer = $container->get(StreamingCompiler::class);
 
 	$document = <<<HTML
 <test arg="a">person</test>
@@ -61,7 +61,7 @@ it('can render nested components', function() {
 	};
 
 	$container = containerWithComponents(['parent' => $parent, 'child' => $child]);
-	$streamer = $container->get(Streaming::class);
+	$streamer = $container->get(StreamingCompiler::class);
 
 	$document = <<<HTML
 <div>I am a <parent/></div>
@@ -84,7 +84,7 @@ it('can handle providers', function() {
 		}
 	}]);
 	$container->set(\Psr\Http\Message\ServerRequestInterface::class, $request);
-	$streamer = $container->get(Streaming::class);
+	$streamer = $container->get(StreamingCompiler::class);
 
 	$document= <<<HTML
 <div>
