@@ -2,14 +2,11 @@
 
 namespace Bottledcode\SwytchFramework\Template\Parser;
 
-use Bottledcode\SwytchFramework\Template\Attributes\Authenticated;
-use Bottledcode\SwytchFramework\Template\Attributes\Authorized;
-use Bottledcode\SwytchFramework\Template\Interfaces\AuthenticationServiceInterface;
 use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
 use Closure;
 use DI\FactoryInterface;
+use Laminas\Escaper\Escaper;
 use LogicException;
-use olvlvl\ComposerAttributeCollector\Attributes;
 use olvlvl\ComposerAttributeCollector\TargetClass;
 
 /**
@@ -34,8 +31,8 @@ class Streaming
 
 	public function __construct(
 		public FactoryInterface $factory,
-		private EscaperInterface $escaper,
-		private AuthenticationServiceInterface $authenticationService,
+		private EscaperInterface $blobber,
+		private Escaper $escaper,
 	) {
 	}
 
@@ -52,38 +49,30 @@ class Streaming
 	 */
 	public function compile(string $code): string
 	{
-		$code = $this->escaper->makeBlobs($code);
+		$code = $this->blobber->makeBlobs($code);
 		$document = new Document($code . "\n\n");
 		return $this->renderData($document)->code;
 	}
 
 	private function renderData(Document $document): Document
 	{
+		$selectionStart = $document->mark();
 		restartData:
-		$this->resetState();
-
 		$result = match ($document->consume()) {
 			'&' => $this->renderCharacterReference($document),
-			'<' => $this->renderOpenTag($document),
+			'<' => $this->escapeData($selectionStart, $document)($this->renderOpenTag(...)),
 			default => null,
 		};
 		if ($result !== null) {
 			$document = $result;
+			$selectionStart = $document->mark();
+			$this->resetState();
 			goto restartData;
 		}
 		if ($document->isEof()) {
-			return $document;
+			return $this->escapeData($selectionStart, $document)(fn(Document $x) => $x);
 		}
 		goto restartData;
-	}
-
-	private function resetState(): void
-	{
-		$this->selfClosing = false;
-		$this->attributeValue = '';
-		$this->attributeName = '';
-		$this->nameBuffer = '';
-		$this->isClosing = false;
 	}
 
 	private function renderCharacterReference($document): Document
@@ -94,6 +83,30 @@ class Streaming
 			}
 		}
 		return $document;
+	}
+
+	private function escapeData(int $selectionStart, Document $document): Closure
+	{
+		$end = $document->mark() - 1;
+		$originalData = substr($document->code, $selectionStart, $end - $selectionStart);
+		$data = $this->blobber->replaceBlobs($originalData, $this->escaper->escapeHtml(...));
+		if ($data === $originalData) {
+			return static fn(Closure $x) => $x($document);
+		}
+		$document = $document->snip($selectionStart, $end)->insert($data, $selectionStart)->seek(
+			$selectionStart + strlen($data) + 1
+		);
+
+		return static fn(Closure $x) => $x($document);
+	}
+
+	private function resetState(): void
+	{
+		$this->selfClosing = false;
+		$this->attributeValue = '';
+		$this->attributeName = '';
+		$this->nameBuffer = '';
+		$this->isClosing = false;
 	}
 
 	private function renderOpenTag(Document $document): Document
@@ -172,6 +185,7 @@ class Streaming
 
 	private function renderCData(Document $document): Document
 	{
+		renderCData:
 		$result = match ($document->consume()) {
 			']' => $this->renderCDataSectionBracket($document),
 			default => null,
@@ -182,7 +196,7 @@ class Streaming
 		if ($document->isEof()) {
 			throw new LogicException('Unexpected end of file');
 		}
-		return $this->renderCData($document);
+		goto renderCData;
 	}
 
 	private function renderCDataSectionBracket(Document $document): Document
@@ -334,6 +348,7 @@ class Streaming
 
 	private function renderBogusComment(Document $document): Document
 	{
+		renderBogusComment:
 		$result = match ($document->consume()) {
 			'>' => $document,
 			default => null,
@@ -344,7 +359,7 @@ class Streaming
 		if ($document->isEof()) {
 			return $document;
 		}
-		return $this->renderBogusComment($document);
+		goto renderBogusComment;
 	}
 
 	private function renderEndTagOpen(Document $document): Document
@@ -395,7 +410,7 @@ class Streaming
 
 		// everything is now configured to render the tag, but we only do that now iff the tag is self-closing
 		if ($this->selfClosing) {
-			// todo: render tag
+			$this->renderComponent($document);
 		}
 
 		return $document;
@@ -456,6 +471,28 @@ class Streaming
 		return $document->reconsume($this->renderBeforeAttributeName(...));
 	}
 
+	private function renderComponent(Document $document): Document
+	{
+		$children = substr($document->code, $this->childrenStart, $this->childrenEnd - $this->childrenStart);
+		$componentName = $this->components[$this->renderingTag];
+
+		/**
+		 * @var $component CompiledComponent
+		 */
+		$component = $this->factory->make(
+			CompiledComponent::class,
+			['name' => $this->renderingTag, 'type' => $componentName]
+		);
+		$rendering = $component->renderToString(['children' => $children, ...$this->attributes]);
+		$rendering = $this->blobber->makeBlobs($rendering);
+		$document = $document->snip($this->cutStart, $this->cutEnd)->insert($rendering, $this->cutStart)->seek(
+			$this->cutStart
+		);
+
+
+		return $document;
+	}
+
 	/**
 	 * This is an alias for renderTagName, but only called when closing a tag
 	 *
@@ -490,30 +527,10 @@ class Streaming
 		return $this->renderComponent($document);
 	}
 
-	private function renderComponent(Document $document): Document
-	{
-		$children = substr($document->code, $this->childrenStart, $this->childrenEnd - $this->childrenStart);
-		$componentName = $this->components[$this->renderingTag];
-
-		/**
-		 * @var $component CompiledComponent
-		 */
-		$component = $this->factory->make(
-			CompiledComponent::class,
-			['name' => $this->renderingTag, 'type' => $componentName]
-		);
-		$rendering = $component->renderToString(['children' => $children, ...$this->attributes]);
-		$rendering = $this->escaper->makeBlobs($rendering);
-		$document = $document->snip($this->cutStart, $this->cutEnd)->insert($rendering, $this->cutStart);
-		$document->seek($this->cutStart);
-
-		return $document;
-	}
-
 	private function renderDocTypeName(Document $document): Document
 	{
 		renderDocTypeName:
-		$result = match ($char = $document->consume()) {
+		$result = match ($document->consume()) {
 			"\t", "\n", "\f", " " => $this->renderAfterDocTypeName($document),
 			'>' => $document,
 			default => null,
@@ -598,6 +615,7 @@ class Streaming
 
 	private function renderDocTypePublicIdentifierDoubleQuoted(Document $document): Document
 	{
+		renderDocTypePublicIdentifierDoubleQuoted:
 		$result = match ($document->consume()) {
 			'"' => $this->renderAfterDocTypePublicIdentifier($document),
 			'>' => $this->setQuirksMode(true, fn() => $document),
@@ -610,7 +628,7 @@ class Streaming
 			$this->quirks = true;
 			return $document;
 		}
-		return $this->renderDocTypePublicIdentifierDoubleQuoted($document);
+		goto renderDocTypePublicIdentifierDoubleQuoted;
 	}
 
 	private function renderAfterDocTypePublicIdentifier(Document $document): Document
@@ -655,6 +673,7 @@ class Streaming
 
 	private function renderDocTypeSystemIdentifierDoubleQuoted(Document $document): Document
 	{
+		again:
 		$result = match ($document->consume()) {
 			'"' => $this->renderAfterDocTypeSystemIdentifier($document),
 			'>' => $this->setQuirksMode(true, fn() => $document),
@@ -663,7 +682,7 @@ class Streaming
 		if ($result !== null) {
 			return $result;
 		}
-		return $this->renderDocTypeSystemIdentifierDoubleQuoted($document);
+		goto again;
 	}
 
 	private function renderAfterDocTypeSystemIdentifier(Document $document): Document
@@ -681,6 +700,7 @@ class Streaming
 
 	private function renderDocTypeSystemIdentifierSingleQuoted(Document $document): Document
 	{
+		again:
 		$result = match ($document->consume()) {
 			"'" => $this->renderAfterDocTypeSystemIdentifier($document),
 			'>' => $this->setQuirksMode(true, fn() => $document),
@@ -689,11 +709,12 @@ class Streaming
 		if ($result !== null) {
 			return $result;
 		}
-		return $this->renderDocTypeSystemIdentifierSingleQuoted($document);
+		goto again;
 	}
 
 	private function renderDocTypePublicIdentifierSingleQuoted(Document $document): Document
 	{
+		again:
 		$result = match ($document->consume()) {
 			"'" => $this->renderAfterDocTypePublicIdentifier($document),
 			'>' => $this->setQuirksMode(true, fn() => $document),
@@ -706,7 +727,7 @@ class Streaming
 			$this->quirks = true;
 			return $document;
 		}
-		return $this->renderDocTypePublicIdentifierSingleQuoted($document);
+		goto again;
 	}
 
 	private function renderAfterDocTypeSystemKeyword(Document $document): Document
@@ -764,21 +785,9 @@ class Streaming
 		return $this->renderBogusDocType($document);
 	}
 
-	private function childrenRendered(Document $document): void
-	{
-		$this->childrenEnd = max($this->childrenStart, $document->mark() - 2 - strlen($this->renderingTag));
-		$component = $this->renderingTag;
-		$attributes = $this->attributes;
-		// todo: render component
-	}
-
-	private function prepareRender(Document $document): void
-	{
-		$this->childrenStart = $document->mark();
-	}
-
 	private function renderAttributeName(Document $document): Document
 	{
+		//$selectionStart = $document->mark();
 		renderAttributeName:
 		$result = match ($char = $document->consume()) {
 			"\t", "\n", "\f", " ", "/", ">" => $document->reconsume($this->renderAfterAttributeName(...)),
@@ -798,7 +807,7 @@ class Streaming
 			"\t", "\n", "\f", " " => $this->renderBeforeAttributeValue($document),
 			'"' => $this->renderAttributeValueDoubleQuoted($document),
 			"'" => $this->renderAttributeValueSingleQuoted($document),
-			'>' => (function() use ($document) {
+			'>' => (function () use ($document) {
 				$this->attributes[$this->attributeName] = true;
 				return $document;
 			})(),
@@ -826,6 +835,12 @@ class Streaming
 
 	private function renderAfterAttributeValueQuoted(Document $document): Document
 	{
+		$this->attributeValue = $this->blobber->replaceBlobs(
+			$this->attributeValue,
+			$this->escaper->escapeHtmlAttr(...)
+		);
+		// escaper doesn't escape single quotes, so we do that here.
+		$this->attributeValue = str_replace("'", '&#39;', $this->attributeValue);
 		$this->attributes[$this->attributeName] = $this->attributeValue;
 
 		$result = match ($document->consume()) {

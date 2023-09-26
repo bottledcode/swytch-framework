@@ -37,6 +37,9 @@ class Document
 
 	public function snip(int $start, int $end): Document
 	{
+		if ($start === $end) {
+			return $this;
+		}
 		//$code = s($this->code, $start, $end - $start);
 		$code = substr($this->code, 0, $start) . substr($this->code, $end);
 		$position = $this->position - $start;
@@ -48,13 +51,17 @@ class Document
 
 	public function insert(string $code, int $at): Document
 	{
+		if ($code === '') {
+			return $this;
+		}
 		$code = substr($this->code, 0, $at) . $code . substr($this->code, $at);
 		$position = $this->position + strlen($code);
 		return new Document($code, $position);
 	}
 
-	public function seek(int $newPosition): void
+	public function seek(int $newPosition): self
 	{
 		$this->position = $newPosition;
+		return $this;
 	}
 }
