@@ -1,2 +1,0 @@
--
-    - 'Cache-Control: immutable,max-age=604800,public,s-maxage=60'

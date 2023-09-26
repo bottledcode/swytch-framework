@@ -1,4 +1,0 @@
--
-    - 'Cache-Control: max-age=60,no-cache,public'
--
-    - 'ETag: test'

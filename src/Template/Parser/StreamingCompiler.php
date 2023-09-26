@@ -12,7 +12,7 @@ use olvlvl\ComposerAttributeCollector\TargetClass;
 
 /**
  */
-class Streaming
+class StreamingCompiler
 {
 	private array $components = [];
 	private bool $quirks = false;

@@ -89,7 +89,7 @@ function containerWithComponents(array $components, bool|Closure $authenticated 
 		\Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface::class => new Variables(),
 	]);
 
-	$streamer = $container->get(\Bottledcode\SwytchFramework\Template\Parser\Streaming::class);
+	$streamer = $container->get(\Bottledcode\SwytchFramework\Template\Parser\StreamingCompiler::class);
 
 	$targetClasses = [];
 	foreach($components as $name => $component) {
