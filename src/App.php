@@ -157,7 +157,7 @@ class App
 		 * @var HeadTagFilter $htmlHeader
 		 */
 		$htmlHeader = $this->container->get(HeadTagFilter::class);
-		$htmlHeader->addScript('htmx', 'https://unpkg.com/htmx.org@1.8.5', defer: true);
+		$htmlHeader->addScript('htmx', 'https://unpkg.com/htmx.org@1.9.6', defer: true);
 
 		$router = new MagicRouter($this->container);
 		$response = $router->go();
