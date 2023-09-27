@@ -69,10 +69,7 @@ HTML;
 
 	$result = $streamer->compile($document);
 
-	expect(trim($result))->toBe(
-		<<<HTML
-<div>I am a <div><div>child</div></div></div>
-HTML);
+	expect($result)->toMatchHtmlSnapshot();
 });
 
 it('can handle providers', function() {
@@ -97,14 +94,37 @@ HTML;
 
 	$result = $streamer->compile($document);
 
-	expect(trim($result))->toBe(
-		<<<HTML
-<div>
+	expect($result)->toMatchHtmlSnapshot();
 
-	<div>User fancy-id</div>
+});
+
+it('can render a full html page', function() {
+	$container = containerWithComponents(['test' => new class {
+		public function render(bool $yay = false, string $name = '&world'): string
+		{
+			if($yay) {
+				return "<script>console.log('{{$name}}')</script>";
+			}
+			return "<div>Hello {{$name}}</div>";
+		}
+	}]);
+	$streamer = $container->get(StreamingCompiler::class);
+
+	$document = <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Test</title>
+	<script>console.log("<test>")</script>
+	<style> .con {text-after-overflow: none; display: {{%%^#@#$}}} </style>
+</head>
+<body>
+<test />
+<test name="world" />
+<test name="ted" yay />
+</body>
+HTML;
 
 
-</div>
-HTML);
-
+	expect($streamer->compile($document))->toMatchHtmlSnapshot();
 });

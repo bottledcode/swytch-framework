@@ -54,12 +54,13 @@ class Document
 		return $this->position;
 	}
 
-	public function snip(int $start, int $end): Document
+	public function snip(int $start, int $end, string &$output = null): Document
 	{
 		if ($start === $end) {
 			return $this;
 		}
 		//$code = s($this->code, $start, $end - $start);
+		$output = substr($this->code, $start, $end - $start);
 		$code = substr($this->code, 0, $start) . substr($this->code, $end);
 		$position = $this->position - $start;
 		if ($position < $start) {
