@@ -112,6 +112,8 @@ class StreamingCompiler
 		$this->isClosing = false;
 	}
 
+	private int $lastTagOpenOpen = 0;
+
 	private function renderOpenTag(Document $document): Document
 	{
 		$result = match (strtolower($document->consume())) {
@@ -365,11 +367,14 @@ class StreamingCompiler
 		goto renderBogusComment;
 	}
 
+	private int $lastTagCloseOpen = 0;
+
 	private function renderEndTagOpen(Document $document): Document
 	{
 		if (ctype_alpha($char = $document->consume())) {
 			$this->nameBuffer = null;
 			$this->isClosing = true;
+			$this->lastTagCloseOpen = $document->mark();
 			return $document->reconsume($this->renderTagClosingName(...));
 		}
 		if ($char === '>') {
@@ -390,21 +395,25 @@ class StreamingCompiler
 	private function renderOpenTagName(Document $document): Document
 	{
 		$starting = $document->mark();
+		$this->lastTagOpenOpen = $starting - 1;
 
 		$document = $this->renderTagName($document);
-
 
 		switch ($tag = strtolower($this->nameBuffer)) {
 			case 'title':
 			case 'textarea':
 				$this->mustMatch = $tag;
-				return $this->renderRCData($document);
+				$now = $document->mark();
+				return $this->renderRCData($document)
+					->snip($now, $this->lastTagCloseOpen, $output)
+					->insert($this->blobber->replaceBlobs($output, $this->escaper->escapeHtml(...)), $now);
 			case 'style':
 				$this->mustMatch = $tag;
+				$now = $document->mark();
 				return $this
 					->renderRawText($document)
-					->snip($starting - 1, $document->mark(), $output)
-					->insert($this->blobber->replaceBlobs($output, $this->escaper->escapeCss(...)), $starting);
+					->snip($now, $this->lastTagCloseOpen, $output)
+					->insert($this->blobber->replaceBlobs($output, $this->escaper->escapeCss(...)), $now);
 			case 'xmp':
 			case 'iframe':
 			case 'noembed':
@@ -415,9 +424,11 @@ class StreamingCompiler
 				return $this->renderRawText($document);
 			case 'script':
 				$this->mustMatch = $tag;
+				$now = $document->mark();
 				return $this
 					->renderScriptData($document)
-					->snip()
+					->snip($now, $this->lastTagCloseOpen, $output)
+					->insert($this->blobber->replaceBlobs($output, $this->escaper->escapeJs(...)), $now);
 			default:
 				// do nothing
 				break;
@@ -526,6 +537,7 @@ class StreamingCompiler
 
 	private function renderRCDataLessThanSign(Document $document): Document
 	{
+		$this->lastTagCloseOpen = $document->mark() - 1;
 		$result = match ($document->consume()) {
 			'/' => $this->renderRcDataEndTagOpen($document),
 			default => null,
@@ -561,6 +573,7 @@ class StreamingCompiler
 
 	private function renderRawTextLessThanSign(Document $document): Document
 	{
+		$this->lastTagCloseOpen = $document->mark() - 1;
 		$result = match ($document->consume()) {
 			'/' => $this->renderRawTextEndTagOpen($document),
 			default => null,
@@ -596,6 +609,7 @@ class StreamingCompiler
 
 	private function renderScriptDataLessThanSign(Document $document): Document
 	{
+		$this->lastTagCloseOpen = $document->mark() - 1;
 		$result = match ($document->consume()) {
 			'/' => $this->renderScriptDataEndTagOpen($document),
 			'!' => $this->renderScriptDataEscapeStart($document),
@@ -644,6 +658,7 @@ class StreamingCompiler
 
 	private function renderScriptDataEscapedLessThanSign(Document $document): Document
 	{
+		$this->lastTagCloseOpen = $document->mark() - 1;
 		return match ($char = $document->consume()) {
 			'/' => $this->renderScriptDataEscapedEndTagOpen($document),
 			default => ctype_alpha($char) ? $document->reconsume(
@@ -762,7 +777,7 @@ class StreamingCompiler
 		}
 
 		// if we are rendering the current tag
-		if ($this->renderingTag !== $this->nameBuffer) {
+		if ($this->renderingTag !== strtolower($this->nameBuffer)) {
 			return $document;
 		}
 
@@ -1152,6 +1167,9 @@ class StreamingCompiler
 
 	private function renderAfterAttributeName(Document $document): Document
 	{
+		if(!empty($this->attributeName) && !array_key_exists($this->attributeName, $this->attributes)) {
+			$this->attributes[$this->attributeName] = true;
+		}
 		$result = match ($document->consume()) {
 			"\t", "\n", "\f", " " => $this->renderAfterAttributeName($document),
 			'/' => $this->renderSelfClosingStartTag($document),
