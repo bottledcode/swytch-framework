@@ -120,6 +120,7 @@ it('can render a full html page', function() {
 </head>
 <body>
 <a href="{http://localhost}"></a>
+<a href="http://localhost/{a test thing}"></a>
 <noscript>{this is a message}</noscript>
 <test />
 <test name="world" />
