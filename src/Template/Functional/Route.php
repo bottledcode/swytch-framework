@@ -11,7 +11,6 @@ use Psr\Http\Message\ServerRequestInterface;
 #[Component('Route')]
 class Route implements HxInterface, DataProvider
 {
-	private static bool $foundRoute = false;
 	/**
 	 * @var array<string, string>
 	 */
@@ -19,11 +18,6 @@ class Route implements HxInterface, DataProvider
 
 	public function __construct(private readonly ServerRequestInterface $request)
 	{
-	}
-
-	public static function reset(): void
-	{
-		self::$foundRoute = false;
 	}
 
 	public static function skipHxProcessing(): bool
@@ -59,8 +53,6 @@ class Route implements HxInterface, DataProvider
 			}
 		}
 
-		self::$foundRoute = true;
-
 		return "<children></children>";
 	}
 
@@ -72,10 +64,5 @@ class Route implements HxInterface, DataProvider
 	public function provideAttributes(): array
 	{
 		return [];
-	}
-
-	protected function foundRoute(): bool
-	{
-		return self::$foundRoute;
 	}
 }

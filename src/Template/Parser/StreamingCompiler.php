@@ -31,6 +31,12 @@ class StreamingCompiler
 	private int $cutEnd = 0;
 	private array $providers = [];
 	private string|null $mustMatch = null;
+	private int $lastTagOpenOpen = 0;
+	private int $lastTagCloseOpen = 0;
+	/**
+	 * @var bool Set to true when rendering children and we want to prevent the capturing of attributes
+	 */
+	private $blockAttributes = false;
 
 	public function __construct(
 		public FactoryInterface $factory,
@@ -112,7 +118,12 @@ class StreamingCompiler
 		$this->isClosing = false;
 	}
 
-	private int $lastTagOpenOpen = 0;
+	private function setAttribute(string $key, string|true $value = true): void {
+		if($this->blockAttributes) {
+			return;
+		}
+		$this->attributes[$key] = $value;
+	}
 
 	private function renderOpenTag(Document $document): Document
 	{
@@ -367,8 +378,6 @@ class StreamingCompiler
 		goto renderBogusComment;
 	}
 
-	private int $lastTagCloseOpen = 0;
-
 	private function renderEndTagOpen(Document $document): Document
 	{
 		if (ctype_alpha($char = $document->consume())) {
@@ -439,8 +448,12 @@ class StreamingCompiler
 			// we can render it, but check to see if we already are rendering a tag
 
 			// prevent us from rendering a nested tag
-			if ($this->renderingTag === $tag) {
+			if ($this->renderingTag === $tag && !$this->selfClosing) {
 				$this->nesting++;
+				return $document;
+			}
+
+			if ($this->renderingTag === $tag && $this->selfClosing) {
 				return $document;
 			}
 
@@ -449,6 +462,7 @@ class StreamingCompiler
 				$this->nesting = 0;
 				$this->renderingTag = $tag;
 				$this->cutStart = $starting - 1;
+				$this->blockAttributes = true;
 				$this->childrenStart = $document->mark();
 			}
 
@@ -456,6 +470,7 @@ class StreamingCompiler
 			if ($this->selfClosing && $this->renderingTag === $tag) {
 				$this->cutEnd = $this->childrenEnd = $document->mark();
 				$document = $this->renderComponent($document);
+				$this->blockAttributes = false;
 				$this->renderingTag = null;
 			}
 		}
@@ -791,6 +806,7 @@ class StreamingCompiler
 		$this->childrenEnd = $childrenEnd - 2;
 
 		$document = $this->renderComponent($document);
+		$this->blockAttributes = false;
 
 		$this->renderingTag = null;
 
@@ -1078,7 +1094,7 @@ class StreamingCompiler
 			'"' => $this->renderAttributeValueDoubleQuoted($document),
 			"'" => $this->renderAttributeValueSingleQuoted($document),
 			'>' => (function () use ($document) {
-				$this->attributes[$this->attributeName] = true;
+				$this->setAttribute($this->attributeName);
 				return $document;
 			})(),
 			default => $this->renderAttributeValueUnquoted($document),
@@ -1111,7 +1127,7 @@ class StreamingCompiler
 		);
 		// escaper doesn't escape single quotes, so we do that here.
 		$this->attributeValue = str_replace("'", '&#39;', $this->attributeValue);
-		$this->attributes[$this->attributeName] = $this->attributeValue;
+		$this->setAttribute($this->attributeName, $this->attributeValue);
 
 		$result = match ($document->consume()) {
 			"\t", "\n", "\f", " " => $this->renderBeforeAttributeName($document),
@@ -1158,17 +1174,14 @@ class StreamingCompiler
 		if ($result !== null) {
 			return $result;
 		}
-		if ($this->attributes[$this->attributeName] === true) {
-			$this->attributes[$this->attributeName] = '';
-		}
-		$this->attributes[$this->attributeName] .= $char;
+		$this->attributeValue .= $char;
 		goto renderAttributeValueUnquoted;
 	}
 
 	private function renderAfterAttributeName(Document $document): Document
 	{
-		if(!empty($this->attributeName) && !array_key_exists($this->attributeName, $this->attributes)) {
-			$this->attributes[$this->attributeName] = true;
+		if (!empty($this->attributeName) && !array_key_exists($this->attributeName, $this->attributes)) {
+			$this->setAttribute($this->attributeName);
 		}
 		$result = match ($document->consume()) {
 			"\t", "\n", "\f", " " => $this->renderAfterAttributeName($document),

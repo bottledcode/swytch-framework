@@ -158,3 +158,21 @@ HTML;
 
 	expect($result)->toMatchHtmlSnapshot();
 });
+
+it('does not overwrite variables if the same variables are used in a child', function () {
+	$container = containerWithComponents(['test' => new class {
+		public function render(string $name = 'world'): string
+		{
+			return "<div>Hello {{$name}} and <children/></div>";
+		}
+	}]);
+	$streamer = $container->get(StreamingCompiler::class);
+
+	$document = <<<HTML
+<test name="Zavier"><test name="Rob" /></test>
+HTML;
+
+	$result = $streamer->compile($document);
+
+	expect($result)->toMatchHtmlSnapshot();
+});
