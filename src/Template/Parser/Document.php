@@ -56,6 +56,7 @@ class Document
 
 	public function snip(int $start, int $end, string &$output = null): Document
 	{
+		$output ??= '';
 		if ($start === $end) {
 			return $this;
 		}
