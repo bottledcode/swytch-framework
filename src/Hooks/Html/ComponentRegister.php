@@ -7,7 +7,7 @@ use Bottledcode\SwytchFramework\Hooks\HandleRequestInterface;
 use Bottledcode\SwytchFramework\Hooks\PreprocessInterface;
 use Bottledcode\SwytchFramework\Hooks\RequestType;
 use Bottledcode\SwytchFramework\Template\Attributes\Component;
-use Bottledcode\SwytchFramework\Template\Compiler;
+use Bottledcode\SwytchFramework\Template\Parser\StreamingCompiler;
 use olvlvl\ComposerAttributeCollector\Attributes;
 use olvlvl\ComposerAttributeCollector\TargetClass;
 use Psr\Http\Message\ServerRequestInterface;
@@ -15,7 +15,7 @@ use Psr\Http\Message\ServerRequestInterface;
 #[Handler(1)]
 readonly class ComponentRegister implements PreprocessInterface, HandleRequestInterface
 {
-	public function __construct(private Compiler $compiler)
+	public function __construct(private StreamingCompiler $compiler)
 	{
 	}
 
