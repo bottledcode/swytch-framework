@@ -118,13 +118,6 @@ class StreamingCompiler
 		$this->isClosing = false;
 	}
 
-	private function setAttribute(string $key, string|true $value = true): void {
-		if($this->blockAttributes) {
-			return;
-		}
-		$this->attributes[$key] = $value;
-	}
-
 	private function renderOpenTag(Document $document): Document
 	{
 		$result = match (strtolower($document->consume())) {
@@ -430,7 +423,10 @@ class StreamingCompiler
 			case 'plaintext':
 			case 'noframes':
 				$this->mustMatch = $tag;
-				return $this->renderRawText($document);
+				$now = $document->mark();
+				return $this->renderRawText($document)
+					->snip($now, $this->lastTagCloseOpen, $output)
+					->insert($this->blobber->replaceBlobs($output, $this->escaper->escapeHtml(...)), $now);
 			case 'script':
 				$this->mustMatch = $tag;
 				$now = $document->mark();
@@ -1119,15 +1115,28 @@ class StreamingCompiler
 		goto renderAttributeValueDoubleQuoted;
 	}
 
-	private function renderAfterAttributeValueQuoted(Document $document): Document
-	{
-		$this->attributeValue = $this->blobber->replaceBlobs(
+	private function processAttributes(Document $document): Document {
+		$value = $this->blobber->replaceBlobs(
 			$this->attributeValue,
 			$this->escaper->escapeHtmlAttr(...)
 		);
 		// escaper doesn't escape single quotes, so we do that here.
-		$this->attributeValue = str_replace("'", '&#39;', $this->attributeValue);
-		$this->setAttribute($this->attributeName, $this->attributeValue);
+		$value = str_replace("'", '&#39;', $value);
+		$this->setAttribute($this->attributeName, $value);
+		if ($value !== $this->attributeValue) {
+			// we need to update the rendered html too...
+			$here = $document->mark();
+			$start = $here - strlen($this->attributeValue) - 1;
+			$document = $document
+				->snip($start, $here - 1)
+				->insert($value, $start);
+		}
+		return $document;
+	}
+
+	private function renderAfterAttributeValueQuoted(Document $document): Document
+	{
+		$document = $this->processAttributes($document);
 
 		$result = match ($document->consume()) {
 			"\t", "\n", "\f", " " => $this->renderBeforeAttributeName($document),
@@ -1142,6 +1151,14 @@ class StreamingCompiler
 			throw new LogicException('Unexpected end of file');
 		}
 		return $document->reconsume($this->renderBeforeAttributeName(...));
+	}
+
+	private function setAttribute(string $key, string|true $value = true): void
+	{
+		if ($this->blockAttributes) {
+			return;
+		}
+		$this->attributes[$key] = $value;
 	}
 
 	private function renderAttributeValueSingleQuoted(Document $document): Document
