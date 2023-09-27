@@ -393,6 +393,7 @@ class StreamingCompiler
 
 		$document = $this->renderTagName($document);
 
+
 		switch ($tag = strtolower($this->nameBuffer)) {
 			case 'title':
 			case 'textarea':
@@ -404,7 +405,6 @@ class StreamingCompiler
 					->renderRawText($document)
 					->snip($starting - 1, $document->mark(), $output)
 					->insert($this->blobber->replaceBlobs($output, $this->escaper->escapeCss(...)), $starting);
-				break;
 			case 'xmp':
 			case 'iframe':
 			case 'noembed':
@@ -415,7 +415,9 @@ class StreamingCompiler
 				return $this->renderRawText($document);
 			case 'script':
 				$this->mustMatch = $tag;
-				return $this->renderScriptData($document);
+				return $this
+					->renderScriptData($document)
+					->snip()
 			default:
 				// do nothing
 				break;
