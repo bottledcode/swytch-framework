@@ -62,7 +62,7 @@ class Document
 		//$code = s($this->code, $start, $end - $start);
 		$output = substr($this->code, $start, $end - $start);
 		$code = substr($this->code, 0, $start) . substr($this->code, $end);
-		$position = $this->position - $start;
+		$position = $this->position - ($end - $start);
 		if ($position < $start) {
 			$position = $start;
 		}
@@ -75,7 +75,7 @@ class Document
 		return new Document($code, $position, $listeners);
 	}
 
-	public function insert(string $code, int $at): Document
+	public function insert(string $code, int $at, bool $keepPosition = false): Document
 	{
 		if ($code === '') {
 			return $this;
