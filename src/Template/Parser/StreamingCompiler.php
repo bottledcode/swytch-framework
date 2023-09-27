@@ -29,6 +29,8 @@ class StreamingCompiler
 	private bool $selfClosing = false;
 	private int $cutStart = 0;
 	private int $cutEnd = 0;
+	private array $providers = [];
+	private string|null $mustMatch = null;
 
 	public function __construct(
 		public FactoryInterface $factory,
@@ -391,12 +393,40 @@ class StreamingCompiler
 
 		$document = $this->renderTagName($document);
 
+		switch ($tag = strtolower($this->nameBuffer)) {
+			case 'title':
+			case 'textarea':
+				$this->mustMatch = $tag;
+				return $this->renderRCData($document);
+			case 'style':
+				$this->mustMatch = $tag;
+				return $this
+					->renderRawText($document)
+					->snip($starting - 1, $document->mark(), $output)
+					->insert($this->blobber->replaceBlobs($output, $this->escaper->escapeCss(...)), $starting);
+				break;
+			case 'xmp':
+			case 'iframe':
+			case 'noembed':
+			case 'noscript':
+			case 'plaintext':
+			case 'noframes':
+				$this->mustMatch = $tag;
+				return $this->renderRawText($document);
+			case 'script':
+				$this->mustMatch = $tag;
+				return $this->renderScriptData($document);
+			default:
+				// do nothing
+				break;
+		}
+
 		// at this point, we know everything about the tag, so we can see if we need to render it.
-		if (array_key_exists(strtolower($this->nameBuffer), $this->components)) {
+		if (array_key_exists($tag, $this->components)) {
 			// we can render it, but check to see if we already are rendering a tag
 
 			// prevent us from rendering a nested tag
-			if ($this->renderingTag === $this->nameBuffer) {
+			if ($this->renderingTag === $tag) {
 				$this->nesting++;
 				return $document;
 			}
@@ -404,13 +434,13 @@ class StreamingCompiler
 			if (empty($this->renderingTag)) {
 				// let's render the tag...
 				$this->nesting = 0;
-				$this->renderingTag = $this->nameBuffer;
+				$this->renderingTag = $tag;
 				$this->cutStart = $starting - 1;
 				$this->childrenStart = $document->mark();
 			}
 
 			// everything is now configured to render the tag, but we only do that now iff the tag is self-closing
-			if ($this->selfClosing && $this->renderingTag === $this->nameBuffer) {
+			if ($this->selfClosing && $this->renderingTag === $tag) {
 				$this->cutEnd = $this->childrenEnd = $document->mark();
 				$document = $this->renderComponent($document);
 				$this->renderingTag = null;
@@ -475,7 +505,187 @@ class StreamingCompiler
 		return $document->reconsume($this->renderBeforeAttributeName(...));
 	}
 
-	private array $providers = [];
+	private function renderRCData(Document $document): Document
+	{
+		renderRCData:
+		$result = match ($document->consume()) {
+			'<' => $this->renderRCDataLessThanSign($document),
+			'&' => $this->renderCharacterReference($document) ? null : null,
+			default => null,
+		};
+		if ($result !== null) {
+			return $result;
+		}
+		if ($document->isEof()) {
+			return $document;
+		}
+		goto renderRCData;
+	}
+
+	private function renderRCDataLessThanSign(Document $document): Document
+	{
+		$result = match ($document->consume()) {
+			'/' => $this->renderRcDataEndTagOpen($document),
+			default => null,
+		};
+		return $result ?? $document->reconsume($this->renderRcData(...));
+	}
+
+	private function renderRcDataEndTagOpen(Document $document): Document
+	{
+		if (ctype_alpha($document->consume())) {
+			$this->nameBuffer = '';
+			return $document->reconsume($this->renderRcDataEndTagName(...));
+		}
+
+		return $document->reconsume($this->renderRcData(...));
+	}
+
+	private function renderRawText(Document $document): Document
+	{
+		renderRawText:
+		$result = match ($document->consume()) {
+			'<' => $this->renderRawTextLessThanSign($document),
+			default => null,
+		};
+		if ($result !== null) {
+			return $result;
+		}
+		if ($document->isEof()) {
+			throw new LogicException('Unexpected end of file');
+		}
+		goto renderRawText;
+	}
+
+	private function renderRawTextLessThanSign(Document $document): Document
+	{
+		$result = match ($document->consume()) {
+			'/' => $this->renderRawTextEndTagOpen($document),
+			default => null,
+		};
+		return $result ?? $document->reconsume($this->renderRawText(...));
+	}
+
+	private function renderRawTextEndTagOpen(Document $document): Document
+	{
+		if (ctype_alpha($document->consume())) {
+			$this->nameBuffer = '';
+			return $document->reconsume($this->renderRawTextEndTagName(...));
+		}
+
+		return $document->reconsume($this->renderRawText(...));
+	}
+
+	private function renderScriptData(Document $document): Document
+	{
+		renderScriptData:
+		$result = match ($document->consume()) {
+			'<' => $this->renderScriptDataLessThanSign($document),
+			default => null,
+		};
+		if ($result !== null) {
+			return $result;
+		}
+		if ($document->isEof()) {
+			return $document;
+		}
+		goto renderScriptData;
+	}
+
+	private function renderScriptDataLessThanSign(Document $document): Document
+	{
+		$result = match ($document->consume()) {
+			'/' => $this->renderScriptDataEndTagOpen($document),
+			'!' => $this->renderScriptDataEscapeStart($document),
+			default => null,
+		};
+		return $result ?? $document->reconsume($this->renderScriptData(...));
+	}
+
+	private function renderScriptDataEndTagOpen(Document $document): Document
+	{
+		if (ctype_alpha($document->consume())) {
+			$this->nameBuffer = '';
+			return $document->reconsume($this->renderScriptDataEndTagName(...));
+		}
+
+		return $document->reconsume($this->renderScriptData(...));
+	}
+
+	private function renderScriptDataEscapeStart(Document $document): Document
+	{
+		$result = match ($document->consume()) {
+			'-' => $this->renderScriptDataEscapeStartDash($document),
+			default => null,
+		};
+		return $result ?? $document->reconsume($this->renderScriptData(...));
+	}
+
+	private function renderScriptDataEscapeStartDash(Document $document): Document
+	{
+		$result = match ($document->consume()) {
+			'-' => $this->renderScriptDataEscapedDashDash($document),
+			default => null,
+		};
+		return $result ?? $document->reconsume($this->renderScriptData(...));
+	}
+
+	private function renderScriptDataEscapedDashDash(Document $document): Document
+	{
+		return match ($document->consume()) {
+			'<' => $this->renderScriptDataEscapedLessThanSign($document),
+			'>' => $this->renderScriptData($document),
+			'-' => $document,
+			default => $this->renderScriptDataEscaped($document),
+		};
+	}
+
+	private function renderScriptDataEscapedLessThanSign(Document $document): Document
+	{
+		return match ($char = $document->consume()) {
+			'/' => $this->renderScriptDataEscapedEndTagOpen($document),
+			default => ctype_alpha($char) ? $document->reconsume(
+				$this->renderScriptDataDoubleEscapeStart(...)
+			) : $this->renderScriptDataEscaped($document),
+		};
+	}
+
+	private function renderScriptDataEscapedEndTagOpen(Document $document): Document
+	{
+		$char = $document->consume();
+		if (ctype_alpha($char)) {
+			$this->nameBuffer = '';
+			return $document->reconsume($this->renderScriptDataEscapedEndTagName(...));
+		}
+		return $document->reconsume($this->renderScriptDataEscaped(...));
+	}
+
+	private function renderScriptDataEscaped(Document $document): Document
+	{
+		read:
+		$result = match ($document->consume()) {
+			'-' => $this->renderScriptDataEscapedDash($document),
+			'<' => $this->renderScriptDataEscapedLessThanSign($document),
+			default => null,
+		};
+		if ($result !== null) {
+			return $result;
+		}
+		if ($document->isEof()) {
+			return $document;
+		}
+		goto read;
+	}
+
+	private function renderScriptDataEscapedDash(Document $document): Document
+	{
+		$result = match ($document->consume()) {
+			'-' => $this->renderScriptDataEscapedDashDash($document),
+			'<' => $this->renderScriptDataEscapedLessThanSign($document),
+			default => null,
+		};
+		return $result ?? $this->renderScriptDataEscaped(...);
+	}
 
 	private function renderComponent(Document $document): Document
 	{
@@ -495,7 +705,7 @@ class StreamingCompiler
 		// of creating a tree.
 		$rendering = str_replace(['<children></children>', '<children/>'], $children, $rendering);
 
-		if(class_implements($component->type, DataProvider::class)) {
+		if (class_implements($component->type, DataProvider::class)) {
 			$this->providers[] = $component;
 			$idx = count($this->providers) - 1;
 			$document->onPosition($this->cutEnd, fn() => $this->providers[$idx] = null);
@@ -506,6 +716,30 @@ class StreamingCompiler
 		);
 
 		return $document;
+	}
+
+	private function renderRawTextEndTagName(Document $document): Document
+	{
+		read:
+		$char = $document->consume();
+
+		if (strtolower($this->nameBuffer) === $this->mustMatch) {
+			$result = match ($char) {
+				"\t", "\n", "\f", " " => $this->renderBeforeAttributeName($document),
+				'/' => $this->renderSelfClosingStartTag($document),
+				'>' => $document,
+				default => null,
+			};
+			$this->mustMatch = $result ? null : $this->mustMatch;
+			return $result ?? $document->reconsume($this->renderRawText(...));
+		}
+
+		if (ctype_alpha($char)) {
+			$this->nameBuffer .= $char;
+			goto read;
+		}
+
+		return $document->reconsume($this->renderRawText(...));
 	}
 
 	/**
@@ -929,5 +1163,167 @@ class StreamingCompiler
 		$this->attributeName = '';
 		$this->attributeValue = '';
 		return $document->reconsume($this->renderAttributeName(...));
+	}
+
+	private function renderRcDataEndTagName(Document $document): Document
+	{
+		read:
+		$char = $document->consume();
+
+		if (strtolower($this->nameBuffer) === $this->mustMatch) {
+			$result = match ($char) {
+				"\t", "\n", "\f", " " => $this->renderBeforeAttributeName($document),
+				'/' => $this->renderSelfClosingStartTag($document),
+				'>' => $document,
+				default => null,
+			};
+			$this->mustMatch = $result ? null : $this->mustMatch;
+			return $result ?? $document->reconsume($this->renderRCData(...));
+		}
+
+		if (ctype_alpha($char)) {
+			$this->nameBuffer .= $char;
+			goto read;
+		}
+
+		return $document->reconsume($this->renderRCData(...));
+	}
+
+	private function renderScriptDataDoubleEscapeStart(Document $document): Document
+	{
+		$this->nameBuffer = '';
+		read:
+		$result = match ($char = $document->consume()) {
+			"\t", "\n", "\f", " ", "/", ">" => strtolower(
+				$this->nameBuffer
+			) === 'script' ? $this->renderScriptDataDoubleEscaped($document) : $this->renderScriptDataEscaped(
+				$document
+			),
+			default => null,
+		};
+		if ($result !== null) {
+			return $result;
+		}
+		if (ctype_alpha($char)) {
+			$this->nameBuffer .= $char;
+			goto read;
+		}
+		return $document->reconsume($this->renderScriptDataEscaped(...));
+	}
+
+	private function renderScriptDataDoubleEscaped(Document $document): Document
+	{
+		read:
+		$result = match ($document->consume()) {
+			'-' => $this->renderScriptDataDoubleEscapedDash($document),
+			'<' => $this->renderScriptDataDoubleEscapedLessThanSign($document),
+			default => null,
+		};
+		if ($result !== null) {
+			return $result;
+		}
+		if ($document->isEof()) {
+			return $document;
+		}
+		goto read;
+	}
+
+	private function renderScriptDataDoubleEscapedDash(Document $document): Document
+	{
+		$result = match ($document->consume()) {
+			'-' => $this->renderScriptDataDoubleEscapedDashDash($document),
+			'<' => $this->renderScriptDataDoubleEscapedLessThanSign($document),
+			default => null,
+		};
+		return $result ?? $this->renderScriptDataDoubleEscaped(...);
+	}
+
+	private function renderScriptDataDoubleEscapedDashDash(Document $document): Document
+	{
+		$result = match ($document->consume()) {
+			'<' => $this->renderScriptDataDoubleEscapedLessThanSign($document),
+			'>' => $this->renderScriptData($document),
+			'-' => $document,
+			default => $this->renderScriptDataDoubleEscaped(...),
+		};
+		return $result ?? $this->renderScriptDataDoubleEscaped(...);
+	}
+
+	private function renderScriptDataDoubleEscapedLessThanSign(Document $document): Document
+	{
+		return match ($char = $document->consume()) {
+			'/' => $this->renderScriptDataDoubleEscapeEnd($document),
+			default => $this->renderScriptDataDoubleEscaped($document),
+		};
+	}
+
+	private function renderScriptDataDoubleEscapeEnd(Document $document): Document
+	{
+		$this->nameBuffer = '';
+		read:
+		$result = match ($char = $document->consume()) {
+			"\t", "\n", "\f", " ", "/", ">" => strtolower(
+				$this->nameBuffer
+			) === 'script' ? $this->renderScriptDataEscaped($document) : $this->renderScriptDataDoubleEscaped(
+				$document
+			),
+			default => null,
+		};
+		if ($result !== null) {
+			return $result;
+		}
+		if (ctype_alpha($char)) {
+			$this->nameBuffer .= $char;
+			goto read;
+		}
+		return $document->reconsume($this->renderScriptDataDoubleEscaped(...));
+	}
+
+	private function renderScriptDataEscapedEndTagName(Document $document): Document
+	{
+		read:
+		$char = $document->consume();
+
+		if (strtolower($this->nameBuffer) === $this->mustMatch) {
+			$result = match ($char) {
+				"\t", "\n", "\f", " " => $this->renderBeforeAttributeName($document),
+				'/' => $this->renderSelfClosingStartTag($document),
+				'>' => $document,
+				default => null,
+			};
+			$this->mustMatch = $result ? null : $this->mustMatch;
+			return $result ?? $document->reconsume($this->renderScriptDataEscaped(...));
+		}
+
+		if (ctype_alpha($char)) {
+			$this->nameBuffer .= $char;
+			goto read;
+		}
+
+		return $document->reconsume($this->renderScriptDataEscaped(...));
+	}
+
+	private function renderScriptDataEndTagName(Document $document): Document
+	{
+		read:
+		$char = $document->consume();
+
+		if (strtolower($this->nameBuffer) === $this->mustMatch) {
+			$result = match ($char) {
+				"\t", "\n", "\f", " " => $this->renderBeforeAttributeName($document),
+				'/' => $this->renderSelfClosingStartTag($document),
+				'>' => $document,
+				default => null,
+			};
+			$this->mustMatch = $result ? null : $this->mustMatch;
+			return $result ?? $document->reconsume($this->renderScriptData(...));
+		}
+
+		if (ctype_alpha($char)) {
+			$this->nameBuffer .= $char;
+			goto read;
+		}
+
+		return $document->reconsume($this->renderScriptData(...));
 	}
 }
