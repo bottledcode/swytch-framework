@@ -116,7 +116,7 @@ it('can render a full html page', function() {
 <head>
 	<title>Test</title>
 	<script>console.log("<test>")</script>
-	<style> .con {text-after-overflow: none; display: {{%%^#@#$}}} </style>
+	<style> .con {{text-after-overflow: none; display: {%%^#@#$}}} </style>
 </head>
 <body>
 <test />
