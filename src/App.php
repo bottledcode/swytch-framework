@@ -7,6 +7,8 @@ use Bottledcode\SwytchFramework\Hooks\Html\HeadTagFilter;
 use Bottledcode\SwytchFramework\Hooks\Html\Renderer;
 use Bottledcode\SwytchFramework\Language\LanguageAcceptor;
 use Bottledcode\SwytchFramework\Router\MagicRouter;
+use Bottledcode\SwytchFramework\Template\Escapers\Variables;
+use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
 use Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface;
 use Bottledcode\SwytchFramework\Template\ReferenceImplementation\ValidatedState;
 use DI\ContainerBuilder;
@@ -123,6 +125,7 @@ class App
 			ServerRequestCreatorInterface::class => autowire(ServerRequestCreator::class),
 			ResponseInterface::class => fn(Psr17Factory $factory) => $factory->createResponse(),
 			EmitterInterface::class => autowire(SapiEmitter::class),
+			EscaperInterface::class => autowire(Variables::class),
 			...$this->dependencyInjection,
 		]);
 
