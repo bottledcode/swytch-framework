@@ -46,8 +46,7 @@ class CompiledComponent
 		}
 
 		$this->rawComponent = $component = $this->container->make($this->type);
-		$rendered = $this->container->call($component->render(...), $parameters);
-		return $rendered;
+		return $this->container->call($component->render(...), $parameters);
 	}
 
 	public function isAuthorized(): bool

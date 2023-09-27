@@ -112,13 +112,15 @@ it('can render a full html page', function() {
 
 	$document = <<<HTML
 <!DOCTYPE html>
-<html>
+<html lang="{en}" class="h-full">
 <head>
-	<title>Test</title>
+	<title>{Test}</title>
 	<script>console.log("<test>")</script>
 	<style> .con {{text-after-overflow: none; display: {%%^#@#$};}} </style>
 </head>
 <body>
+<a href="{http://localhost}"></a>
+<noscript>{this is a message}</noscript>
 <test />
 <test name="world" />
 <test name="ted" yay />
@@ -127,4 +129,32 @@ HTML;
 
 
 	expect($streamer->compile($document))->toMatchHtmlSnapshot();
+});
+
+it('does not render non-rendered components', function() {
+	$request = new \Nyholm\Psr7\ServerRequest('GET', 'http://localhost/');
+	$container = containerWithComponents(['route' => new \Bottledcode\SwytchFramework\Template\Functional\Route($request), 'user' => new class {
+		public function render(string $id): string
+		{
+			throw new Exception('This should not be called');
+		}
+	}]);
+	$container->set(\Psr\Http\Message\ServerRequestInterface::class, $request);
+	$streamer = $container->get(StreamingCompiler::class);
+
+	$document= <<<HTML
+<div>
+<Route
+				method="GET"
+				path="/dashboard"
+		>
+	<User id="{{:id}}"></User>
+</route>
+<route path="/">test</route>
+</div>
+HTML;
+
+	$result = $streamer->compile($document);
+
+	expect($result)->toMatchHtmlSnapshot();
 });
