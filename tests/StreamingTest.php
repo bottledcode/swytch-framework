@@ -1,9 +1,6 @@
 <?php
 
-use Bottledcode\SwytchFramework\Template\Escapers\Variables;
-use Bottledcode\SwytchFramework\Template\Interfaces\AuthenticationServiceInterface;
 use Bottledcode\SwytchFramework\Template\Parser\StreamingCompiler;
-use Psr\Log\NullLogger;
 
 it('can parse some basic html', function () {
 	$container = containerWithComponents([]);
@@ -45,7 +42,7 @@ HTML
 	);
 });
 
-it('can render nested components', function() {
+it('can render nested components', function () {
 	$parent = new class {
 		public function render(): string
 		{
@@ -72,18 +69,21 @@ HTML;
 	expect($result)->toMatchHtmlSnapshot();
 });
 
-it('can handle providers', function() {
+it('can handle providers', function () {
 	$request = new \Nyholm\Psr7\ServerRequest('GET', 'http://localhost/test/fancy-id');
-	$container = containerWithComponents(['route' => new \Bottledcode\SwytchFramework\Template\Functional\Route($request), 'user' => new class {
-		public function render(string $id): string
-		{
-			return "<div>User {{$id}}</div>";
+	$container = containerWithComponents([
+		'route' => new \Bottledcode\SwytchFramework\Template\Functional\Route($request),
+		'user' => new class {
+			public function render(string $id): string
+			{
+				return "<div>User {{$id}}</div>";
+			}
 		}
-	}]);
+	]);
 	$container->set(\Psr\Http\Message\ServerRequestInterface::class, $request);
 	$streamer = $container->get(StreamingCompiler::class);
 
-	$document= <<<HTML
+	$document = <<<HTML
 <div>
 <route path="/test/:id">
 	<User id="{{:id}}"></User>
@@ -95,19 +95,20 @@ HTML;
 	$result = $streamer->compile($document);
 
 	expect($result)->toMatchHtmlSnapshot();
-
 });
 
-it('can render a full html page', function() {
-	$container = containerWithComponents(['test' => new class {
-		public function render(bool $yay = false, string $name = '&world'): string
-		{
-			if($yay) {
-				return "<script>console.log('{{$name}}')</script>";
+it('can render a full html page', function () {
+	$container = containerWithComponents([
+		'test' => new class {
+			public function render(bool $yay = false, string $name = '&world'): string
+			{
+				if ($yay) {
+					return "<script>console.log('{{$name}}')</script>";
+				}
+				return "<div>Hello {{$name}}</div>";
 			}
-			return "<div>Hello {{$name}}</div>";
 		}
-	}]);
+	]);
 	$streamer = $container->get(StreamingCompiler::class);
 
 	$document = <<<HTML
@@ -132,18 +133,21 @@ HTML;
 	expect($streamer->compile($document))->toMatchHtmlSnapshot();
 });
 
-it('does not render non-rendered components', function() {
+it('does not render non-rendered components', function () {
 	$request = new \Nyholm\Psr7\ServerRequest('GET', 'http://localhost/');
-	$container = containerWithComponents(['route' => new \Bottledcode\SwytchFramework\Template\Functional\Route($request), 'user' => new class {
-		public function render(string $id): string
-		{
-			throw new Exception('This should not be called');
+	$container = containerWithComponents([
+		'route' => new \Bottledcode\SwytchFramework\Template\Functional\Route($request),
+		'user' => new class {
+			public function render(string $id): string
+			{
+				throw new Exception('This should not be called');
+			}
 		}
-	}]);
+	]);
 	$container->set(\Psr\Http\Message\ServerRequestInterface::class, $request);
 	$streamer = $container->get(StreamingCompiler::class);
 
-	$document= <<<HTML
+	$document = <<<HTML
 <div>
 <Route
 				method="GET"
@@ -161,12 +165,14 @@ HTML;
 });
 
 it('does not overwrite variables if the same variables are used in a child', function () {
-	$container = containerWithComponents(['test' => new class {
-		public function render(string $name = 'world'): string
-		{
-			return "<div>Hello {{$name}} and <children/></div>";
+	$container = containerWithComponents([
+		'test' => new class {
+			public function render(string $name = 'world'): string
+			{
+				return "<div>Hello {{$name}} and <children/></div>";
+			}
 		}
-	}]);
+	]);
 	$streamer = $container->get(StreamingCompiler::class);
 
 	$document = <<<HTML
@@ -176,4 +182,34 @@ HTML;
 	$result = $streamer->compile($document);
 
 	expect($result)->toMatchHtmlSnapshot();
+});
+
+it('can render a csfr token', function () {
+	$container = containerWithComponents([
+		'csrf' => new class {
+			public function render(): string
+			{
+				return '<input type="hidden" name="csrf" value="1234" />';
+			}
+		},
+		'form,1' => new \Bottledcode\SwytchFramework\Template\Functional\Form(),
+	]);
+	$streamer = $container->get(StreamingCompiler::class);
+
+	$document = <<<HTML
+<form hx-post="/" id="tester">
+<input type="hidden" name="hello" value="world" />
+</form>
+HTML;
+
+	$result = $streamer->compile($document);
+	$start = strpos($result, "value='") + 7;
+	$end = strpos($result, "'", $start);
+	$result = substr_replace($result, '1234', $start, $end - $start);
+	expect($result)->toMatchHtmlSnapshot()
+		->and(
+			$container->get(\Bottledcode\SwytchFramework\Hooks\Common\Headers::class)->postprocess(
+				new \Nyholm\Psr7\Response()
+			)->getHeader('Set-Cookie')[0]
+		)->toStartWith('csrf_token=');
 });

@@ -39,6 +39,17 @@ class Headers implements HandleRequestInterface, PostprocessInterface
 		$this->headers[$name][] = $value;
 	}
 
+	public function setCookie(string $name, string $value, \DateTimeInterface $expiresAt = new \DateTimeImmutable()) {
+		$value = urlencode($value);
+		$headerValue = "{$name}={$value}; Path=/; Expires={$expiresAt->format(\DateTimeInterface::RFC7231)}; HttpOnly; SameSite=Strict";
+		$this->setHeader('Set-Cookie', $headerValue, false);
+	}
+
+	public function deleteCookie(string $name) {
+		$headerValue = "{$name}=deleted; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Strict";
+		$this->setHeader('Set-Cookie', $headerValue, false);
+	}
+
 	public function postprocess(ResponseInterface $response): ResponseInterface
 	{
 		foreach ($this->headers as $header => $values) {
