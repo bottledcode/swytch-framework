@@ -3,13 +3,11 @@
 namespace Bottledcode\SwytchFramework\Template\Traits;
 
 use Bottledcode\SwytchFramework\Hooks\Common\Headers;
-use Bottledcode\SwytchFramework\Template\Attributes\Component;
 use Bottledcode\SwytchFramework\Template\Enum\HtmxSwap;
 use Bottledcode\SwytchFramework\Template\Parser\StreamingCompiler;
 use JsonException;
 use LogicException;
 use Masterminds\HTML5\Exception;
-use olvlvl\ComposerAttributeCollector\Attributes;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Symfony\Component\Serializer\Serializer;
@@ -129,20 +127,6 @@ trait Htmx
 	}
 
 	/**
-	 * A CSS selector that updates the target of the content update to a different element on the page
-	 *
-	 * @param non-empty-string $target
-	 * @return void
-	 */
-	private function retarget(string $target): void
-	{
-		if (empty($this->headers)) {
-			throw new LogicException('Can not redirect without Headers in ' . static::class);
-		}
-		$this->headers->setHeader('HX-Retarget', $target, true);
-	}
-
-	/**
 	 * @param array<string> $events
 	 * @return void
 	 * @throws JsonException
@@ -169,60 +153,23 @@ trait Htmx
 		$this->headers->setHeader('HX-Push-Url', $url);
 	}
 
-	/**
-	 * @param string $target_id
-	 * @param array<mixed> $withState
-	 * @param string $prependHtml
-	 * @return string
-	 * @throws ContainerExceptionInterface
-	 * @throws Exception
-	 * @throws NotFoundExceptionInterface
-	 */
-	private function rerender(string $target_id, array $withState = [], string $prependHtml = ''): string
+	private function renderFragment(string $id, string $fragment): string
 	{
-		$attributes = Attributes::forClass(static::class);
+		$this->retarget($id);
+		return $this->compiler->compile($fragment);
+	}
 
-		if (isset($this->serializer) && $_SERVER['HTTP_ACCEPT'] === 'application/json') {
-			return $this->serializer->serialize($withState, 'json');
-		}
-
-		if (isset($this->serializer) && $_SERVER['HTTP_ACCEPT'] === 'application/xml') {
-			return $this->serializer->serialize($withState, 'xml');
-		}
-
-		$attribute = null;
-		// look for the name of the component
-		foreach ($attributes->classAttributes as $attribute) {
-			if ($attribute instanceof Component) {
-				$state = implode(
-					' ',
-					array_map(
-						static fn($key, $value) => "{$key}=\"{{$value}}\"",
-						array_keys($withState),
-						$withState
-					)
-				);
-				break;
-			}
-		}
-
-		if ($attribute === null || !is_string($state)) {
-			throw new LogicException('Can not rerender a non-component in ' . static::class);
-		}
-
-		if (!isset($this->compiler)) {
-			throw new LogicException('Can not rerender without a compiler in ' . static::class);
-		}
+	/**
+	 * A CSS selector that updates the target of the content update to a different element on the page
+	 *
+	 * @param non-empty-string $target
+	 * @return void
+	 */
+	private function retarget(string $target): void
+	{
 		if (empty($this->headers)) {
-			throw new LogicException('Can not rerender without Headers in ' . static::class);
+			throw new LogicException('Can not redirect without Headers in ' . static::class);
 		}
-
-		$this->headers->setHeader('HX-Retarget', '#' . $target_id);
-		$this->headers->setHeader('HX-Reswap', 'outerHTML');
-
-		$dom = $this->compiler->compile(
-			"{$prependHtml}\n<{$attribute->name} id='{{$target_id}}' {$state}></{$attribute->name}>"
-		);
-		return $this->compiler->renderCompiledHtml($dom);
+		$this->headers->setHeader('HX-Retarget', $target, true);
 	}
 }
