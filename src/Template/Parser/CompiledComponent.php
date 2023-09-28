@@ -35,17 +35,20 @@ class CompiledComponent
 			return '';
 		}
 
-		foreach($this->providers as $compiledComponent) {
+		foreach ($this->providers as $compiledComponent) {
 			$provider = $compiledComponent?->rawComponent;
-			if($provider instanceof DataProvider) {
+			if ($provider instanceof DataProvider) {
 				$parameters = [...$parameters, ...$provider->provideAttributes()];
-				foreach($parameters as $key => &$value) {
+				foreach ($parameters as $key => &$value) {
 					$value = $provider->provideValues($value);
 				}
 			}
 		}
 
 		$this->rawComponent = $component = $this->container->make($this->type);
+		if (empty($parameters['attributes'])) {
+			$parameters['attributes'] = $parameters;
+		}
 		return $this->container->call($component->render(...), $parameters);
 	}
 

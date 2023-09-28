@@ -5,9 +5,13 @@ namespace Bottledcode\SwytchFramework\Template\Attributes;
 use Attribute;
 
 #[Attribute(Attribute::TARGET_CLASS)]
-class Component
+readonly class Component
 {
-	public function __construct(public string $name)
+	/**
+	 * @param string $name The name of the component
+	 * @param bool $isContainer Whether the component is a container or not
+	 */
+	public function __construct(public string $name, public bool $isContainer = false)
 	{
 	}
 }

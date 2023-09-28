@@ -90,10 +90,12 @@ function containerWithComponents(array $components, bool|Closure $authenticated 
 	]);
 
 	$streamer = $container->get(\Bottledcode\SwytchFramework\Template\Parser\StreamingCompiler::class);
+	$container->set(\Psr\Http\Message\ResponseInterface::class, new \Nyholm\Psr7\Response());
 
 	$targetClasses = [];
 	foreach($components as $name => $component) {
-		$targetClasses[Component::class][] = [[$name], get_class($component)];
+		$p = explode(',', $name);
+		$targetClasses[Component::class][] = [$p, get_class($component)];
 	}
 	$collection = new \olvlvl\ComposerAttributeCollector\Collection(
 		targetClasses: $targetClasses,

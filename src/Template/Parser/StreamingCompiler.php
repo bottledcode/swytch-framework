@@ -45,9 +45,14 @@ class StreamingCompiler
 	) {
 	}
 
+	private array $containers = [];
+
 	public function registerComponent(TargetClass $component): void
 	{
 		$this->components[mb_strtolower($component->attribute->name)] = $component->name;
+		if($component->attribute->isContainer) {
+			$this->containers[mb_strtolower($component->attribute->name)] = true;
+		}
 	}
 
 	/**
@@ -401,7 +406,7 @@ class StreamingCompiler
 
 		$document = $this->renderTagName($document);
 
-		switch ($tag = strtolower($this->nameBuffer)) {
+		switch ($tag = mb_strtolower($this->nameBuffer)) {
 			case 'title':
 			case 'textarea':
 				$this->mustMatch = $tag;
@@ -457,7 +462,7 @@ class StreamingCompiler
 				// let's render the tag...
 				$this->nesting = 0;
 				$this->renderingTag = $tag;
-				$this->cutStart = $starting - 1;
+				$this->cutStart = empty($this->containers[$tag]) ? $starting - 1 : $document->mark();
 				$this->blockAttributes = true;
 				$this->childrenStart = $document->mark();
 			}
@@ -718,7 +723,7 @@ class StreamingCompiler
 	private function renderComponent(Document $document): Document
 	{
 		$children = substr($document->code, $this->childrenStart, $this->childrenEnd - $this->childrenStart);
-		$componentName = $this->components[strtolower($this->renderingTag)];
+		$componentName = $this->components[mb_strtolower($this->renderingTag)];
 
 		/**
 		 * @var $component CompiledComponent
@@ -731,7 +736,7 @@ class StreamingCompiler
 		$rendering = $this->blobber->makeBlobs($rendering);
 		// stupid hack to get around the fact that we are lexigraphically parsing the document instead
 		// of creating a tree.
-		$rendering = str_replace(['<children></children>', '<children/>'], $children, $rendering);
+		$rendering = str_replace(['<children></children>', '<children/>', '<children />'], $children, $rendering);
 
 		if (class_implements($component->type, DataProvider::class)) {
 			$this->providers[] = $component;
@@ -788,7 +793,7 @@ class StreamingCompiler
 		}
 
 		// if we are rendering the current tag
-		if ($this->renderingTag !== strtolower($this->nameBuffer)) {
+		if ($this->renderingTag !== ($tag = mb_strtolower($this->nameBuffer))) {
 			return $document;
 		}
 
@@ -798,7 +803,7 @@ class StreamingCompiler
 		}
 
 		// everything is in place... render the tag
-		$this->cutEnd = $document->mark();
+		$this->cutEnd = empty($this->containers[$tag]) ? $document->mark() : ($childrenEnd - 2);
 		$this->childrenEnd = $childrenEnd - 2;
 
 		$document = $this->renderComponent($document);
