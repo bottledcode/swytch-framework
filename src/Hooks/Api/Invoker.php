@@ -4,9 +4,11 @@ namespace Bottledcode\SwytchFramework\Hooks\Api;
 
 use Bottledcode\SwytchFramework\Hooks\Handler;
 use Bottledcode\SwytchFramework\Hooks\ProcessInterface;
+use Bottledcode\SwytchFramework\Hooks\RequestType;
 use Bottledcode\SwytchFramework\Router\Attributes\Route;
 use Bottledcode\SwytchFramework\Router\Exceptions\InvalidRequest;
 use Bottledcode\SwytchFramework\Template\Interfaces\StateProviderInterface;
+use Bottledcode\SwytchFramework\Template\Parser\StreamingCompiler;
 use DI\DependencyException;
 use DI\FactoryInterface;
 use DI\NotFoundException;
@@ -89,9 +91,14 @@ class Invoker extends ApiHandler implements ProcessInterface
 		}
 		$component = $this->factory->make($route->class);
 		$result = $componentMethod->invokeArgs($component, $arguments);
+		if($this->currentType === RequestType::Htmx) {
+			$result = $this->factory->make(StreamingCompiler::class)->compile($result);
+		}
 		if (is_string($result)) {
 			return $response->withBody($this->psr17Factory->createStream($result));
-		} elseif ($result instanceof ResponseInterface) {
+		}
+
+		if ($result instanceof ResponseInterface) {
 			return $result;
 		}
 		return $response;
