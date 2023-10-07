@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:complexType name="http_methods">
+        <xs:choice>
+            <xs:element name="GET"/>
+            <xs:element name="POST"/>
+            <xs:element name="PUT"/>
+            <xs:element name="DELETE"/>
+        </xs:choice>
+    </xs:complexType>
+    <xs:element name="route">
+        <xs:complexType>
+            <xs:attribute name="path" type="xs:string" use="required"/>
+            <xs:attribute name="method" type="http_methods" use="optional"/>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="defaultRoute">
+        <xs:complexType>
+            <xs:attribute name="path" type="xs:string" use="prohibited"/>
+            <xs:attribute name="method" type="http_methods" use="optional"/>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>

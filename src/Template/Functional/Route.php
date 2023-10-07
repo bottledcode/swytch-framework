@@ -8,16 +8,18 @@ use Bottledcode\SwytchFramework\Template\Interfaces\HxInterface;
 use LogicException;
 use Psr\Http\Message\ServerRequestInterface;
 
-#[Component('Route')]
+#[Component('swytch:route')]
 class Route implements HxInterface, DataProvider
 {
+	protected static \WeakMap $foundRoute;
 	/**
 	 * @var array<string, string>
 	 */
 	public array $variables = [];
 
-	public function __construct(private readonly ServerRequestInterface $request)
+	public function __construct(protected readonly ServerRequestInterface $request)
 	{
+		self::$foundRoute ??= new \WeakMap();
 	}
 
 	public static function skipHxProcessing(): bool
@@ -52,6 +54,8 @@ class Route implements HxInterface, DataProvider
 				return '';
 			}
 		}
+
+		self::$foundRoute[$this->request] = true;
 
 		return "<children></children>";
 	}
