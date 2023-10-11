@@ -2,7 +2,7 @@
 
 The Swytch Framework is a new, fledgling, but powerful framework allowing you to write HTML inline with your application
 logic, including API endpoints. It is built on top of [htmx](https://htmx.org/) for the browser-side heavy-lifting,
-and [html5-php](https://github.com/Masterminds/html5-php) to handle the HTML parsing.
+and a custom, streaming HTML5 parser, to handle the HTML and escaping.
 
 Features:
 
@@ -40,20 +40,18 @@ class ExampleComponent {
     use \Bottledcode\SwytchFramework\Template\Traits\Htmx;
     
     #[\Bottledcode\SwytchFramework\Router\Attributes\Route(\Bottledcode\SwytchFramework\Router\Method::POST, '/api/number')]
-    public function getNumber(string $target_id, array $state): int {
-        return $this->rerender($target_id, [...$state, 'number' => random_int(0, 100)]);
+    public function getNumber(string $name, string $number): int {
+        return $this->render($name, random_int(0, 100));
     }
     
     public function render(string $name, int $number = null): string {
-        if($number === null) {
-            $number = random_int(0, 100);
-        }
-    
         $this->begin();
         ?>
         <div>
             <h1>Hello, {<?= $name ?>}</h1>
             <form hx-post="/api/number">
+                <!-- CSRF protection is automatically added to forms -->
+                <input type='hidden' name='name' value={<?= $name ?>} />
                 <p>Here is a random number: {<?= $number ?>}</p>
                 <button type="submit">Generate a new random number</button>
             </form>
