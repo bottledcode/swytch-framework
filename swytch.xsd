@@ -20,4 +20,9 @@
             <xs:attribute name="method" type="http_methods" use="optional"/>
         </xs:complexType>
     </xs:element>
+    <xs:element name="fragment">
+        <xs:complexType>
+            <xs:attribute name="id" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
 </xs:schema>
