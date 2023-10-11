@@ -42,6 +42,7 @@ class StreamingCompiler
 	private string|null $fragmentId = null;
 	private int $fragmentStart = 0;
 	private int $fragmentLength = 0;
+	private bool $shallow = false;
 
 	public function __construct(
 		public FactoryInterface $factory,
@@ -131,6 +132,14 @@ class StreamingCompiler
 		$this->attributeName = '';
 		$this->nameBuffer = '';
 		$this->isClosing = false;
+	}
+
+	public function compileShallow(string $code): string
+	{
+		$this->shallow = true;
+		$compiled = $this->compile($code);
+		$this->shallow = false;
+		return $compiled;
 	}
 
 	private function renderOpenTag(Document $document): Document
@@ -746,7 +755,9 @@ class StreamingCompiler
 		$rendering = $this->blobber->makeBlobs($rendering);
 		// stupid hack to get around the fact that we are lexigraphically parsing the document instead
 		// of creating a tree.
-		$rendering = str_replace(['<children></children>', '<children/>', '<children />'], $children, $rendering);
+		if (!$this->shallow) {
+			$rendering = str_replace(['<children></children>', '<children/>', '<children />'], $children, $rendering);
+		}
 
 		if (class_implements($component->type, DataProvider::class)) {
 			$this->providers[] = $component;
