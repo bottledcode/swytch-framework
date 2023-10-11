@@ -757,7 +757,7 @@ class StreamingCompiler
 		if ($component->rawComponent instanceof RewritingTag && $component->rawComponent->isItMe($this->fragmentId)) {
 			$this->fragmentStart = $this->cutStart;
 			$document->onPosition(
-				$this->cutStart + strlen($rendering),
+				$this->cutEnd,
 				fn(Document $document) => $this->fragmentLength = $document->mark() - $this->fragmentStart
 			);
 		}

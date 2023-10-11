@@ -4,5 +4,5 @@ namespace Bottledcode\SwytchFramework\Template\Functional;
 
 interface RewritingTag
 {
-	public function isItMe(string $id): bool;
+	public function isItMe(string|null $id): bool;
 }
