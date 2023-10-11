@@ -14,7 +14,7 @@ class Document
 		// note: we only consume more than one in very special circumstances so we're not handling that special case.
 		if (array_key_exists($this->position, $this->listeners)) {
 			foreach ($this->listeners[$this->position] as $listener) {
-				$listener();
+				$listener($this);
 			}
 			unset($this->listeners[$this->position]);
 		}

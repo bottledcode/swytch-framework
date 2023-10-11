@@ -3,6 +3,7 @@
 namespace Bottledcode\SwytchFramework\Template\Parser;
 
 use Bottledcode\SwytchFramework\Template\Functional\DataProvider;
+use Bottledcode\SwytchFramework\Template\Functional\RewritingTag;
 use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
 use Closure;
 use DI\FactoryInterface;
@@ -37,6 +38,10 @@ class StreamingCompiler
 	 * @var bool Set to true when rendering children and we want to prevent the capturing of attributes
 	 */
 	private $blockAttributes = false;
+	private array $containers = [];
+	private string|null $fragmentId = null;
+	private int $fragmentStart = 0;
+	private int $fragmentLength = 0;
 
 	public function __construct(
 		public FactoryInterface $factory,
@@ -45,14 +50,19 @@ class StreamingCompiler
 	) {
 	}
 
-	private array $containers = [];
-
 	public function registerComponent(TargetClass $component): void
 	{
 		$this->components[mb_strtolower($component->attribute->name)] = $component->name;
-		if($component->attribute->isContainer) {
+		if ($component->attribute->isContainer) {
 			$this->containers[mb_strtolower($component->attribute->name)] = true;
 		}
+	}
+
+	public function compileFragment(string $id, string $code): string
+	{
+		$this->fragmentId = $id;
+		$compiled = $this->compile($code);
+		return substr($compiled, $this->fragmentStart, $this->fragmentLength);
 	}
 
 	/**
@@ -744,11 +754,18 @@ class StreamingCompiler
 			$document->onPosition($this->cutEnd, fn() => $this->providers[$idx] = null);
 		}
 
-		$document = $document->snip($this->cutStart, $this->cutEnd)->insert($rendering, $this->cutStart)->seek(
-			$this->cutStart
-		);
+		if ($component->rawComponent instanceof RewritingTag && $component->rawComponent->isItMe($this->fragmentId)) {
+			$this->fragmentStart = $this->cutStart;
+			$document->onPosition(
+				$this->cutStart + strlen($rendering),
+				fn(Document $document) => $this->fragmentLength = $document->mark() - $this->fragmentStart
+			);
+		}
 
-		return $document;
+		return $document
+			->snip($this->cutStart, $this->cutEnd)
+			->insert($rendering, $this->cutStart)
+			->seek($this->cutStart);
 	}
 
 	private function renderRawTextEndTagName(Document $document): Document
@@ -1120,25 +1137,6 @@ class StreamingCompiler
 		goto renderAttributeValueDoubleQuoted;
 	}
 
-	private function processAttributes(Document $document): Document {
-		$value = $this->blobber->replaceBlobs(
-			$this->attributeValue,
-			$this->escaper->escapeHtmlAttr(...)
-		);
-		// escaper doesn't escape single quotes, so we do that here.
-		$value = str_replace("'", '&#39;', $value);
-		$this->setAttribute($this->attributeName, $value);
-		if ($value !== $this->attributeValue) {
-			// we need to update the rendered html too...
-			$here = $document->mark();
-			$start = $here - strlen($this->attributeValue) - 1;
-			$document = $document
-				->snip($start, $here - 1)
-				->insert($value, $start);
-		}
-		return $document;
-	}
-
 	private function renderAfterAttributeValueQuoted(Document $document): Document
 	{
 		$document = $this->processAttributes($document);
@@ -1156,6 +1154,26 @@ class StreamingCompiler
 			throw new LogicException('Unexpected end of file');
 		}
 		return $document->reconsume($this->renderBeforeAttributeName(...));
+	}
+
+	private function processAttributes(Document $document): Document
+	{
+		$value = $this->blobber->replaceBlobs(
+			$this->attributeValue,
+			$this->escaper->escapeHtmlAttr(...)
+		);
+		// escaper doesn't escape single quotes, so we do that here.
+		$value = str_replace("'", '&#39;', $value);
+		$this->setAttribute($this->attributeName, $value);
+		if ($value !== $this->attributeValue) {
+			// we need to update the rendered html too...
+			$here = $document->mark();
+			$start = $here - strlen($this->attributeValue) - 1;
+			$document = $document
+				->snip($start, $here - 1)
+				->insert($value, $start);
+		}
+		return $document;
 	}
 
 	private function setAttribute(string $key, string|true $value = true): void
