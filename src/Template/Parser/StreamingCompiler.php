@@ -489,9 +489,14 @@ class StreamingCompiler
 			// everything is now configured to render the tag, but we only do that now iff the tag is self-closing
 			if ($this->selfClosing && $this->renderingTag === $tag) {
 				$this->cutEnd = $this->childrenEnd = $document->mark();
+				if ($this->shallow) {
+					$document->onPosition($this->cutEnd, fn() => $this->renderingTag = null);
+				}
 				$document = $this->renderComponent($document);
 				$this->blockAttributes = false;
-				$this->renderingTag = null;
+				if (!$this->shallow) {
+					$this->renderingTag = null;
+				}
 			}
 		}
 
@@ -755,9 +760,7 @@ class StreamingCompiler
 		$rendering = $this->blobber->makeBlobs($rendering);
 		// stupid hack to get around the fact that we are lexigraphically parsing the document instead
 		// of creating a tree.
-		if (!$this->shallow) {
-			$rendering = str_replace(['<children></children>', '<children/>', '<children />'], $children, $rendering);
-		}
+		$rendering = str_replace(['<children></children>', '<children/>', '<children />'], $children, $rendering);
 
 		if (class_implements($component->type, DataProvider::class)) {
 			$this->providers[] = $component;
@@ -834,10 +837,18 @@ class StreamingCompiler
 		$this->cutEnd = empty($this->containers[$tag]) ? $document->mark() : ($childrenEnd - 2);
 		$this->childrenEnd = $childrenEnd - 2;
 
+		// on shallow renders, do not render children
+		if ($this->shallow) {
+			$document->onPosition($this->cutEnd, fn() => $this->renderingTag = null);
+		}
+
 		$document = $this->renderComponent($document);
 		$this->blockAttributes = false;
 
-		$this->renderingTag = null;
+		// do not allow children to be rendered
+		if (!$this->shallow) {
+			$this->renderingTag = null;
+		}
 
 		return $document;
 	}
