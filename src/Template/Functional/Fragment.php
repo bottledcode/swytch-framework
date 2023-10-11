@@ -15,8 +15,11 @@ class Fragment implements RewritingTag
 		return "<children></children>";
 	}
 
-	public function isItMe(string $id): bool
+	public function isItMe(string|null $id): bool
 	{
+		if ($id === null) {
+			return false;
+		}
 		return $id === $this->id;
 	}
 }
