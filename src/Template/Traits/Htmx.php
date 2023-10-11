@@ -155,7 +155,7 @@ trait Htmx
 
 	private function renderFragment(string $id, string $fragment): string
 	{
-		$this->retarget($id);
+		$this->retarget("#$id");
 		return $this->compiler->compileFragment($id, $fragment);
 	}
 
