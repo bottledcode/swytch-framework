@@ -34,17 +34,17 @@ readonly class Index
 		$this->begin();
 		?>
         <!DOCTYPE html>
-        <html lang="{<?= $this->language->currentLanguage ?>}">
+        <html xmlns:swytch="file://../../vendor/bottledcode/swytch-framework/swytch.xsd" lang="{<?= $this->language->currentLanguage ?>}">
         <head>
         </head>
         <body>
         <h1>Hello world</h1>
-        <Route path="/" method="GET">
+        <swytch:route path="/" method="GET">
             <Counter></counter>
-        </Route>
-        <DefaultRoute>
+        </swytch:route>
+        <swytch:defaultRoute>
             <h1>404</h1>
-        </defaultroute>
+        </swytch:defaultRoute>
         </body>
         </html>
 		<?php
@@ -73,21 +73,15 @@ readonly class Counter
     ) {}
 
 	#[Route(Method::POST, '/api/count/add')]
-	public function add(array $state, string $target_id): string
+	public function add(int $count): string
 	{
-		return $this->rerender(
-		    $target_id, 
-		    [...$state, 'count' => ($state['count'] ?? 0) + 1]
-        );
+	    return $this->render($count + 1);
 	}
 
 	#[Route(Method::POST, '/api/count/sub')]
-	public function sub(array $state, string $target_id): string
+	public function sub(int $count): string
 	{
-		return $this->rerender(
-		    $target_id, 
-		    [...$state, 'count' => ($state['count'] ?? 0) - 1]
-        );
+		return $this->render($count + 1);
 	}
 
 	public function render(int $count = 0)
@@ -96,6 +90,7 @@ readonly class Counter
 		?>
         <div>
             <form hx-post="/api/count">
+                <input type="hidden" name="count" value="{<?= $count ?>}" />
                 <h1>{<?= __('Current count:') ?>} {<?= $count ?>}</h1>
                 <button type="submit" hx-post="/api/count/add"> + </button>
                 <button type="submit" hx-post="/api/count/sub"> - </button>
@@ -137,16 +132,16 @@ the framework in action or [view the source](https://github.com/bottledcode/once
 ## Routing
 
 For components, routing is performed very similar to how you might expect it to work in a Javascript framework with JSX.
-The Swytch Framework uses a built-in `Route` and `DefaultRoute` component to perform routing.
+The Swytch Framework uses a built-in `swytch:Route` and `swytch:DefaultRoute` component to perform routing.
 
 ```html
 
-<Route path="/" method="GET">
+<swytch:Route path="/" method="GET">
     <Home></Home>
-</Route>
-<DefaultRoute>
+</swytch:Route>
+<swytch:DefaultRoute>
     <NotFound></NotFound>
-</DefaultRoute>
+</swytch:DefaultRoute>
 ```
 
 The built-in `Route` component is also a `DataProvider` component that allows you to inject the value of route
@@ -154,9 +149,9 @@ parameters:
 
 ```html
 
-<Route path="/user/{:id}" method="GET">
+<swytch:Route path="/user/{:id}" method="GET">
     <User id="{{:id}}}"></User>
-</Route>
+</swytch:Route>
 ```
 
 For API endpoints, routing is performed using the `#[Route]` attribute:
@@ -196,8 +191,16 @@ class Example {
   use \Bottledcode\SwytchFramework\Template\Traits\Htmx;
   
   #[Route(Method::POST, '/api/example')]
-  public function example() {
-    return $this->rerenderFragment('complex fragment', [...$state, 'say' => 'goodbye']);
+  public function example(string $name): string {
+    return $this->renderFragment('complex fragment', $this->complexFragment($name, 'goodbye'));
+  }
+  
+  private function complexFragment(string $name, string $say): string {
+    $this->begin();
+    ?>
+        <p>{<?= $say ?>} {<?= $name ?>}</p>
+    <?php
+    return $this->end();
   }
   
   public function render(string $name, string $say = 'hello') {
@@ -205,8 +208,8 @@ class Example {
     ?>
     <div>
         <h1>Hello world</h1>
-        <fragment hx-target="this" hx-post="/api/example" id="complex fragment">
-        <p>{<?= $say ?>} {<?= $name ?>}</p>
+        <fragment hx-post="/api/example" hx-vals='{name: "{<?= $name ?>}"}' id="complex fragment">
+        <?= $this->complexFragment($name, $say) ?>
         </fragment>
     </div>
     <?php
@@ -280,28 +283,27 @@ frameworks. For example, given the following template:
 
 ```html
 
-<route path="/">
+<swytch:route path="/">
     <HugeComponent></HugeComponent>
-</route>
-<DefaultRoute>
+</swytch:route>
+<swytch:DefaultRoute>
     <NotFound></NotFound>
-</DefaultRoute>
+</swytch:DefaultRoute>
 ```
 
 When the user goes to a non-existent page, the Swytch Framework will only run the code inside the `NotFound` component.
 
 ## Tamper Protection
 
-The Swytch Framework provides a built-in CSRF token that is automatically added to all `<form>` tags, along with the
-component's current state, signed and validated via a secret key. This is fully pluggable, so you can use your own CSRF
-tokens or even encrypt the state between calls.
+The Swytch Framework provides a built-in CSRF token that is automatically added to all `<form>` tags, signed and
+validated via a secret key. This is fully pluggable, so you can use your own CSRF tokens.
 
 ## Customizable
 
 The Swytch Framework is fully customizable for your needs. However, it is **not** compatible with PSR middlewares as
-this framework does **not** handle requests like traditional frameworks. Instead a request goes through several phases:
+this framework does **not** handle requests like traditional frameworks. Instead, a request goes through several phases:
 
-1. The request is parsed and it determines which type of request it is.
+1. The request is parsed, and it determines which type of request it is.
 2. Preprocessing: The request is transformed (such as extracting request parameters of API requests).
 3. Processing: The request is transformed into a response (rendering templates or calling API handlers).
 4. Postprocessing: The response is transformed (such as adding headers).
@@ -323,7 +325,8 @@ correct translation.
 In the Swytch Framework, components are just regular classes decorated by the `Component` attribute and containing
 a `render` function that returns a string. There are several helper traits that you can use to make your life easier,
 such as `RegularPHP` and `Htmx`. These traits provide helper functions for rendering HTML and interfacing with htmx. For
-example, the `RegularPHP` trait provides the `begin` and `end` functions, which allow you to write HTML in a PHP.
+example, the `RegularPHP` trait provides the `begin` and `end` functions, which allow you to write HTML in a PHP file
+using output buffering.
 
 Your constructor is called via dependency injection just before rendering, so you can inject any services you need, or
 perform any other initialization. You can also inject the `ServerRequestInterface` to get access to the current request.
@@ -436,6 +439,8 @@ There are some key configuration elements configured through environment variabl
 With the exception the internal components of the Component Compiler, all aspects of the Swytch Framework are configured
 through dependency injection which can be configured when constructing an `App` object.
 
+Note that it is **required** to provide an authentication provider (even if it only returns `true`).
+
 ## Attributes
 
 Attributes are handled via `olvlvl/composer-attribute-collector`. This allows attributes to be read from
@@ -444,7 +449,7 @@ improves runtime performance, you **_must_** remember to run `composer dump` aft
 This is not ideal but a necessary evil. If you have a better solution, please let us know. :)
 
 In the meantime, you can use phpstorm file watchers, or some other method to watch `.php` files and run `composer dump`
-when they change.
+when files change.
 
 ## State and Forms
 
@@ -552,6 +557,27 @@ readonly class ExampleComponent {
   }
 }
 ```
+
+## Container components
+
+When rendering, the component name and information is completely stripped from the HTML, thus the following
+
+```html
+
+<swytch:route path="/">
+    <div>hello world</div>
+</swytch:route>
+```
+
+produces the following output:
+
+```html
+    <div>hello world</div>
+```
+
+when navigating to `/`. However, there are times when you don't want this to happen, and in this case you probably want
+a container component. This is how forms work internally. There is a `Form` component that renders the children and adds
+additional hidden inputs for CSRF protection.
 
 # Best Practices
 
