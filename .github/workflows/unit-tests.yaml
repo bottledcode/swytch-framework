@@ -22,10 +22,13 @@ jobs:
           coverage: xdebug
           tools: composer
           php-version: '8.2'
-          extensions: mbstring xdebug dom
+          extensions: mbstring xdebug
 
       - name: Install Dependencies
-        run: composer install --optimize-autoloader
+        run: composer install --optimize-autoloader --no-plugins
+
+      - name: Create attributes file
+        run: composer dump
 
       - name: Run Unit Tests
         run: vendor/bin/pest --coverage-clover coverage.xml --ci
