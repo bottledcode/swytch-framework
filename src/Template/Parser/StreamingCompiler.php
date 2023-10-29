@@ -112,7 +112,7 @@ class StreamingCompiler
 
 	private function escapeData(int $selectionStart, Document $document): Closure
 	{
-		if($this->blockAttributes) {
+		if ($this->blockAttributes) {
 			return static fn(Closure $x) => $x($document);
 		}
 		$end = $document->mark() - 1;
@@ -426,13 +426,17 @@ class StreamingCompiler
 		$starting = $document->mark();
 		$this->lastTagOpenOpen = $starting - 1;
 
+		if (!$this->blockAttributes) {
+			$this->attributes = [];
+		}
+
 		$document = $this->renderTagName($document);
 
 		switch ($tag = mb_strtolower($this->nameBuffer)) {
 			case 'title':
 			case 'textarea':
 				$this->mustMatch = $tag;
-				if($this->blockAttributes) {
+				if ($this->blockAttributes) {
 					return $this->renderRCData($document);
 				}
 				$now = $document->mark();
@@ -441,7 +445,7 @@ class StreamingCompiler
 					->insert($this->blobber->replaceBlobs($output, $this->escaper->escapeHtml(...)), $now);
 			case 'style':
 				$this->mustMatch = $tag;
-				if($this->blockAttributes) {
+				if ($this->blockAttributes) {
 					return $this->renderRawText($document);
 				}
 				$now = $document->mark();
@@ -456,7 +460,7 @@ class StreamingCompiler
 			case 'plaintext':
 			case 'noframes':
 				$this->mustMatch = $tag;
-				if($this->blockAttributes) {
+				if ($this->blockAttributes) {
 					return $this->renderRawText($document);
 				}
 				$now = $document->mark();
@@ -465,7 +469,7 @@ class StreamingCompiler
 					->insert($this->blobber->replaceBlobs($output, $this->escaper->escapeHtml(...)), $now);
 			case 'script':
 				$this->mustMatch = $tag;
-				if($this->blockAttributes) {
+				if ($this->blockAttributes) {
 					return $this->renderScriptData($document);
 				}
 				$now = $document->mark();
@@ -1195,7 +1199,7 @@ class StreamingCompiler
 
 	private function processAttributes(Document $document): Document
 	{
-		if($this->blockAttributes) {
+		if ($this->blockAttributes) {
 			return $document;
 		}
 
