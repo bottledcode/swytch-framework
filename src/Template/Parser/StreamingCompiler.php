@@ -112,6 +112,9 @@ class StreamingCompiler
 
 	private function escapeData(int $selectionStart, Document $document): Closure
 	{
+		if($this->blockAttributes) {
+			return static fn(Closure $x) => $x($document);
+		}
 		$end = $document->mark() - 1;
 		$originalData = substr($document->code, $selectionStart, $end - $selectionStart);
 		$data = $this->blobber->replaceBlobs($originalData, $this->escaper->escapeHtml(...));
@@ -429,12 +432,18 @@ class StreamingCompiler
 			case 'title':
 			case 'textarea':
 				$this->mustMatch = $tag;
+				if($this->blockAttributes) {
+					return $this->renderRCData($document);
+				}
 				$now = $document->mark();
 				return $this->renderRCData($document)
 					->snip($now, $this->lastTagCloseOpen, $output)
 					->insert($this->blobber->replaceBlobs($output, $this->escaper->escapeHtml(...)), $now);
 			case 'style':
 				$this->mustMatch = $tag;
+				if($this->blockAttributes) {
+					return $this->renderRawText($document);
+				}
 				$now = $document->mark();
 				return $this
 					->renderRawText($document)
@@ -447,12 +456,18 @@ class StreamingCompiler
 			case 'plaintext':
 			case 'noframes':
 				$this->mustMatch = $tag;
+				if($this->blockAttributes) {
+					return $this->renderRawText($document);
+				}
 				$now = $document->mark();
 				return $this->renderRawText($document)
 					->snip($now, $this->lastTagCloseOpen, $output)
 					->insert($this->blobber->replaceBlobs($output, $this->escaper->escapeHtml(...)), $now);
 			case 'script':
 				$this->mustMatch = $tag;
+				if($this->blockAttributes) {
+					return $this->renderScriptData($document);
+				}
 				$now = $document->mark();
 				return $this
 					->renderScriptData($document)
@@ -1180,13 +1195,15 @@ class StreamingCompiler
 
 	private function processAttributes(Document $document): Document
 	{
-		$value = $this->blobber->replaceBlobs(
-			$this->attributeValue,
-			$this->escaper->escapeHtmlAttr(...)
-		);
+		if($this->blockAttributes) {
+			return $document;
+		}
+
+		$originalValue = $this->blobber->replaceBlobs($this->attributeValue, fn($_) => $_);
+		$value = $this->escaper->escapeHtmlAttr($originalValue);
 		// escaper doesn't escape single quotes, so we do that here.
 		$value = str_replace("'", '&#39;', $value);
-		$this->setAttribute($this->attributeName, $value);
+		$this->setAttribute($this->attributeName, $originalValue);
 		if ($value !== $this->attributeValue) {
 			// we need to update the rendered html too...
 			$here = $document->mark();

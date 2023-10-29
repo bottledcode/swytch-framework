@@ -213,3 +213,78 @@ HTML;
 			)->getHeader('Set-Cookie')[0]
 		)->toStartWith('csrf_token=');
 });
+
+test('data providers do not escape their children', function () {
+	$container = containerWithComponents([
+		'provider' => new class implements \Bottledcode\SwytchFramework\Template\Functional\DataProvider {
+
+			public function provideAttributes(): array
+			{
+				return ['test' => 'test'];
+			}
+
+			public function provideValues(string $value): mixed
+			{
+				return $value;
+			}
+
+			public function render(string $test = ''): string
+			{
+				if ($test) {
+					return 'oh no';
+				}
+				return '<children></children>';
+			}
+		},
+		'echo' => new class {
+			public function render(string $test = ''): string
+			{
+				return $test;
+			}
+		},
+		'empty' => new class {
+			public function render()
+			{
+				return '';
+			}
+		}
+	]);
+	$streamer = $container->get(StreamingCompiler::class);
+	$document = <<<HTML
+<provider><empty /></provider>
+<provider>
+<echo test="overridden" />
+</provider>
+<echo test="not overridden" />
+HTML;
+
+	$result = $streamer->compile($document);
+	expect($result)->toMatchHtmlSnapshot();
+});
+
+it('passes variables correctly', function () {
+	$container = containerWithComponents([
+		'echo' => new class {
+			public function render(string $test = ''): string
+			{
+				return $test;
+			}
+		},
+		'child' => new class {
+			public function render(string $test = ''): string
+			{
+				return "<div>{{$test}}<children/></div>";
+			}
+		}
+	]);
+
+	$streamer = $container->get(StreamingCompiler::class);
+	$document = <<<HTML
+<echo test="{some text}" />
+<child test="{outer text}">
+<echo test="{inner text}" />
+</child>
+HTML;
+	$result = $streamer->compile($document);
+	expect($result)->toMatchHtmlSnapshot();
+});
