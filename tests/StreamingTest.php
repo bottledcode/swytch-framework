@@ -265,24 +265,24 @@ HTML;
 it('passes variables correctly', function () {
 	$container = containerWithComponents([
 		'echo' => new class {
-			public function render(string $test = ''): string
+			public function render(string $Test = ''): string
 			{
-				return $test;
+				return $Test;
 			}
 		},
 		'child' => new class {
-			public function render(string $test = ''): string
+			public function render(string $Test = ''): string
 			{
-				return "<div>{{$test}}<children/></div>";
+				return "<div>{{$Test}}<children/></div>";
 			}
 		}
 	]);
 
 	$streamer = $container->get(StreamingCompiler::class);
 	$document = <<<HTML
-<echo test="{some text}" />
-<child test="{outer text}">
-<echo test="{inner text}" />
+<echo Test="{some text}" />
+<child Test="{outer text}">
+<echo Test="{inner text}" />
 </child>
 HTML;
 	$result = $streamer->compile($document);

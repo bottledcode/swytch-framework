@@ -133,6 +133,7 @@ class StreamingCompiler
 		$this->selfClosing = false;
 		$this->attributeValue = '';
 		$this->attributeName = '';
+		$this->originalAttributeName = '';
 		$this->nameBuffer = '';
 		$this->isClosing = false;
 	}
@@ -545,7 +546,8 @@ class StreamingCompiler
 	private function renderBeforeAttributeName(Document $document): Document
 	{
 		$oops = function (string $c, Closure $next) use ($document) {
-			$this->attributeName = $c;
+			$this->attributeName = strtolower($c);
+			$this->originalAttributeName = $c;
 			$this->attributeValue = '';
 			return $next($document);
 		};
@@ -560,6 +562,7 @@ class StreamingCompiler
 			return $result;
 		}
 		$this->attributeName = '';
+		$this->originalAttributeName = '';
 		$this->attributeValue = '';
 		return $document->reconsume($this->renderAttributeName(...));
 	}
@@ -1130,6 +1133,8 @@ class StreamingCompiler
 		return $this->renderBogusDocType($document);
 	}
 
+	private string $originalAttributeName = '';
+
 	private function renderAttributeName(Document $document): Document
 	{
 		//$selectionStart = $document->mark();
@@ -1143,6 +1148,7 @@ class StreamingCompiler
 			return $result;
 		}
 		$this->attributeName .= strtolower($char);
+		$this->originalAttributeName .= $char;
 		goto renderAttributeName;
 	}
 
@@ -1153,7 +1159,7 @@ class StreamingCompiler
 			'"' => $this->renderAttributeValueDoubleQuoted($document),
 			"'" => $this->renderAttributeValueSingleQuoted($document),
 			'>' => (function () use ($document) {
-				$this->setAttribute($this->attributeName);
+				$this->setAttribute($this->originalAttributeName);
 				return $document;
 			})(),
 			default => $this->renderAttributeValueUnquoted($document),
@@ -1207,7 +1213,7 @@ class StreamingCompiler
 		$value = $this->escaper->escapeHtmlAttr($originalValue);
 		// escaper doesn't escape single quotes, so we do that here.
 		$value = str_replace("'", '&#39;', $value);
-		$this->setAttribute($this->attributeName, $originalValue);
+		$this->setAttribute($this->originalAttributeName, $originalValue);
 		if ($value !== $this->attributeValue) {
 			// we need to update the rendered html too...
 			$here = $document->mark();
@@ -1263,8 +1269,8 @@ class StreamingCompiler
 
 	private function renderAfterAttributeName(Document $document): Document
 	{
-		if (!empty($this->attributeName) && !array_key_exists($this->attributeName, $this->attributes)) {
-			$this->setAttribute($this->attributeName);
+		if (!empty($this->attributeName) && !array_key_exists($this->originalAttributeName, $this->attributes)) {
+			$this->setAttribute($this->originalAttributeName);
 		}
 		$result = match ($document->consume()) {
 			"\t", "\n", "\f", " " => $this->renderAfterAttributeName($document),
@@ -1278,6 +1284,7 @@ class StreamingCompiler
 		}
 		$this->attributeName = '';
 		$this->attributeValue = '';
+		$this->originalAttributeName = '';
 		return $document->reconsume($this->renderAttributeName(...));
 	}
 
