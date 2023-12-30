@@ -2,6 +2,8 @@
 
 namespace Bottledcode\SwytchFramework\Template\Parser;
 
+use Bottledcode\SwytchFramework\Cache\AbstractCache;
+use Bottledcode\SwytchFramework\Cache\Control\Tokenizer;
 use Bottledcode\SwytchFramework\Template\Functional\DataProvider;
 use Bottledcode\SwytchFramework\Template\Functional\RewritingTag;
 use Bottledcode\SwytchFramework\Template\Interfaces\EscaperInterface;
@@ -9,6 +11,7 @@ use Closure;
 use DI\FactoryInterface;
 use Laminas\Escaper\Escaper;
 use LogicException;
+use olvlvl\ComposerAttributeCollector\Attributes;
 use olvlvl\ComposerAttributeCollector\TargetClass;
 
 /**
@@ -48,6 +51,7 @@ class StreamingCompiler
 		public FactoryInterface $factory,
 		private EscaperInterface $blobber,
 		private Escaper $escaper,
+		public Tokenizer $tokenizer,
 	) {
 	}
 
@@ -778,6 +782,15 @@ class StreamingCompiler
 			CompiledComponent::class,
 			['name' => $this->renderingTag, 'type' => $componentName, 'providers' => $this->providers]
 		);
+
+		// configure tokenizer
+		$attributes = Attributes::forClass($component::class);
+		foreach($attributes->classAttributes as $attribute) {
+			if($attribute instanceof AbstractCache) {
+				$this->tokenizer = $attribute->tokenize($this->tokenizer);
+			}
+		}
+
 		$rendering = $component->renderToString($this->attributes);
 		$rendering = $this->blobber->makeBlobs($rendering);
 		// stupid hack to get around the fact that we are lexigraphically parsing the document instead

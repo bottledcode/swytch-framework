@@ -2,6 +2,9 @@
 
 namespace Bottledcode\SwytchFramework\Hooks\Api;
 
+use Bottledcode\SwytchFramework\Cache\AbstractCache;
+use Bottledcode\SwytchFramework\Cache\Control\GeneratesEtagInterface;
+use Bottledcode\SwytchFramework\Cache\Control\Tokenizer;
 use Bottledcode\SwytchFramework\Hooks\Handler;
 use Bottledcode\SwytchFramework\Hooks\ProcessInterface;
 use Bottledcode\SwytchFramework\Hooks\RequestType;
@@ -13,6 +16,7 @@ use DI\DependencyException;
 use DI\FactoryInterface;
 use DI\NotFoundException;
 use Nyholm\Psr7\Factory\Psr17Factory;
+use olvlvl\ComposerAttributeCollector\Attributes;
 use olvlvl\ComposerAttributeCollector\TargetMethod;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -90,17 +94,43 @@ class Invoker extends ApiHandler implements ProcessInterface
 			throw new InvalidRequest('Unsupported parameter type in ' . $route->class . '::' . $route->name);
 		}
 		$component = $this->factory->make($route->class);
+
+		// now determine cache control headers
+		$tokenizer = $this->factory->make(Tokenizer::class);
+		$attributes = Attributes::forClass($component);
+		foreach ($attributes->classAttributes as $attribute) {
+			if ($attribute instanceof AbstractCache) {
+				$tokenizer = $attribute->tokenize($tokenizer);
+			}
+		}
+		foreach ($attributes->methodsAttributes[$componentMethod->name] as $attribute) {
+			if ($attribute instanceof AbstractCache) {
+				$tokenizer = $attribute->tokenize($tokenizer);
+			}
+		}
+
+		if ($component instanceof GeneratesEtagInterface) {
+			$response = $response->withHeader("ETag", $etag = "W\\" . md5(implode($component->getEtagComponents())));
+			if(($_SERVER['HTTP_IF_NONE_MATCH'] ?? null) && $etag === $_SERVER['HTTP_IF_NONE_MATCH']) {
+				return $response->withStatus(304)->withHeader('Cache-Control', $tokenizer->render());
+			}
+		}
+
 		$result = $componentMethod->invokeArgs($component, $arguments);
-		if($this->currentType === RequestType::Htmx) {
-			$result = $this->factory->make(StreamingCompiler::class)->compile($result);
+		if ($this->currentType === RequestType::Htmx) {
+			$compiler = $this->factory->make(StreamingCompiler::class, ['tokenizer' => $tokenizer]);
+			$result = $compiler->compile($result);
+			$tokenizer = $compiler->tokenizer;
 		}
 		if (is_string($result)) {
-			return $response->withBody($this->psr17Factory->createStream($result));
+			return $response
+				->withBody($this->psr17Factory->createStream($result))
+				->withHeader('Cache-Control', $tokenizer->render());
 		}
 
 		if ($result instanceof ResponseInterface) {
 			return $result;
 		}
-		return $response;
+		return $response->withHeader('Cache-Control', $tokenizer->render());
 	}
 }
