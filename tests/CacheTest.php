@@ -75,6 +75,9 @@ it('can handle revalidation rules', function () {
 
 	$directives[] = new NeverCache();
 	expect(render($tokenizer, ...$directives))->toBe("private no-store");
+
+	$directives[] = new Revalidate(RevalidationEnum::EveryRequest);
+	expect(render($tokenizer, ...$directives))->toBe("private no-store");
 });
 
 it('can handle public/private', function () {
