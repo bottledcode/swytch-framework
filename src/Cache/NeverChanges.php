@@ -15,7 +15,11 @@ readonly class NeverChanges extends AbstractCache
 	public function tokenize(Tokenizer $tokenizer): Tokenizer
 	{
 		// there is a component that requires a shorter cache, that wins
-		if($tokenizer->maxAge < self::YEAR) {
+		if($tokenizer->maxAge < self::YEAR && $tokenizer->maxAge !== null) {
+			return $tokenizer;
+		}
+
+		if($tokenizer->noStore) {
 			return $tokenizer;
 		}
 

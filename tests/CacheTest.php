@@ -50,6 +50,7 @@ it('can handle revalidation rules', function () {
 	$tokenizer = new Tokenizer();
 
 	$directives[] = new NeverChanges();
+	expect(render($tokenizer, ...$directives))->toBe("public max-age=604800 immutable");
 	$directives[] = new Revalidate(RevalidationEnum::AfterError, 300);
 	expect(render($tokenizer, ...$directives))->toBe("public stale-if-error=300");
 	$directives[] = new Revalidate(RevalidationEnum::AfterStale, 300);
@@ -71,6 +72,9 @@ it('can handle revalidation rules', function () {
 
 	$directives[] = new MaxAge(300);
 	expect(render($tokenizer, ...$directives))->toBe("public max-age=300 no-cache");
+
+	$directives[] = new NeverCache();
+	expect(render($tokenizer, ...$directives))->toBe("private no-store");
 });
 
 it('can handle public/private', function () {
