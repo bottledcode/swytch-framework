@@ -28,6 +28,7 @@ it('can handle max age rules', function () {
 	$tokenizer = new Tokenizer();
 
 	$directives[] = new NeverChanges();
+	expect(render($tokenizer, ...$directives))->toBe("public max-age=604800 immutable");
 
 	$directives[] = new MaxAge(3000);
 	expect(render($tokenizer, ...$directives))->toBe("public max-age=3000");
@@ -41,8 +42,11 @@ it('can handle max age rules', function () {
 	$directives[] = new MaxAge(200, true);
 	expect(render($tokenizer, ...$directives))->toBe("public max-age=300 s-maxage=200");
 
+	$directives[] = new MaxAge(0);
+	expect(render($tokenizer, ...$directives))->toBe("private no-store");
 	$directives[] = new NeverCache();
 	$directives[] = new NeverChanges();
+	$directives[] = new MaxAge(3000);
 	expect(render($tokenizer, ...$directives))->toBe("private no-store");
 });
 
