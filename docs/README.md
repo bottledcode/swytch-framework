@@ -181,6 +181,49 @@ API endpoints also use the Symfony serializer, so you can accept complex types a
 parameters and body parameters. Note that API endpoints are expected to begin with `/api/`. This is currently a
 hard-coded requirement; please open an issue if you have a use-case that requires this to be configurable.
 
+## Caching
+
+`Cache-Control` headers are automatically handled for you by the framework if you use a few attributes. When deciding
+which header to send, it will use the least amount of caching time.
+For example, consider these two dependent components:
+
+```php
+#[\Bottledcode\SwytchFramework\Cache\UserSpecific]
+#[\Bottledcode\SwytchFramework\Cache\MaxAge(120)]
+#[\Bottledcode\SwytchFramework\Cache\Revalidate(\Bottledcode\SwytchFramework\Cache\RevalidationEnum::EveryRequest)]
+#[\Bottledcode\SwytchFramework\Template\Attributes\Component('delivery')]
+class Delivery {
+    public function render() {
+        return "<status />";
+    }
+}
+
+#[\Bottledcode\SwytchFramework\Cache\UserSpecific]
+#[\Bottledcode\SwytchFramework\Cache\MaxAge(500)]
+#[\Bottledcode\SwytchFramework\Cache\Revalidate(\Bottledcode\SwytchFramework\Cache\RevalidationEnum::WhenStale)]
+#[\Bottledcode\SwytchFramework\Template\Attributes\Component('status')]
+class Status {}
+```
+
+In this case, the `Cache-Control` header will be `private max-age=120 no-cache` to reflect the most restrictive caching.
+
+Here's a full listing of supported attributes:
+
+| name         | description                                                          |
+|--------------|----------------------------------------------------------------------|
+| CachePublic  | Allows proxy/CDN servers to cache the response (default)             |
+| MaxAge       | Specify how many seconds a response should be considered 'fresh' for |
+| NeverCache   | Never cache the response                                             |
+| Revalidate   | Specify how clients should validate their cached data                |
+| UserSpecific | Prevent proxy/CDN servers from caching the response                  |
+
+## Etags
+
+Further, for API requests,
+any class that implements `\Bottledcode\SwytchFramework\Cache\Control\GeneratesEtagInterface` can return an array of
+strings that will be used to generate an ETAG for that request, before the request is executed.
+A `304` will be returned if the ETAG matches and the API handler won't be called.
+
 ## Context-Aware Escaping
 
 The Swytch Framework automatically escapes all output inside `{` brackets `}` in your output. It is fully context-aware,
@@ -544,6 +587,6 @@ component.
 
 # Unit Testing
 
-Unit testing components is a first-class citizen in the Swytch Framework. 
+Unit testing components is a first-class citizen in the Swytch Framework.
 We suggest using `pestphp/pest` along with `spatie/pest-plugin-snapshots` to use snapshot testing.
 The template repository has some excellent examples of how to set this up using the Streaming Compiler.
