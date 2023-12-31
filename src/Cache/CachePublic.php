@@ -9,7 +9,7 @@ readonly class CachePublic extends AbstractCache
 {
 	public function tokenize(Tokenizer $tokenizer): Tokenizer
 	{
-		if (!$tokenizer->public) {
+		if ($tokenizer->private) {
 			return $tokenizer;
 		}
 

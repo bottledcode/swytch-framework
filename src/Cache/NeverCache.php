@@ -18,9 +18,10 @@ readonly class NeverCache extends AbstractCache
 			proxyRevalidate: false,
 			noStore: true,
 			public: false,
+			private: true,
 			immutable: false,
 			staleWhileRevalidating: null,
-			staleIfError: null
+			staleIfError: null,
 		);
 	}
 }

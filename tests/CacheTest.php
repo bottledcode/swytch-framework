@@ -21,13 +21,15 @@ function render(Tokenizer $tokenizer, AbstractCache ...$directives): string
 
 it('can describe a simple public cache', function () {
 	$tokenizer = new Tokenizer();
-	expect(render($tokenizer))->toBe('public');
+	$directives[] = new CachePublic();
+	expect(render($tokenizer, ...$directives))->toBe('public');
 });
 
 it('can handle max age rules', function () {
 	$tokenizer = new Tokenizer();
 
 	$directives[] = new NeverChanges();
+	$directives[] = new CachePublic();
 	expect(render($tokenizer, ...$directives))->toBe("public max-age=604800 immutable");
 
 	$directives[] = new MaxAge(3000);
@@ -54,6 +56,7 @@ it('can handle revalidation rules', function () {
 	$tokenizer = new Tokenizer();
 
 	$directives[] = new NeverChanges();
+	$directives[] = new CachePublic();
 	expect(render($tokenizer, ...$directives))->toBe("public max-age=604800 immutable");
 	$directives[] = new Revalidate(RevalidationEnum::AfterError, 300);
 	expect(render($tokenizer, ...$directives))->toBe("public stale-if-error=300");
@@ -95,4 +98,10 @@ it('can handle public/private', function () {
 
 	$directives[] = new CachePublic();
 	expect(render($tokenizer, ...$directives))->toBe("private");
+});
+
+it('renders nothing when empty', function() {
+	$tokenizer = new Tokenizer();
+
+	expect(render($tokenizer))->toBe('');
 });

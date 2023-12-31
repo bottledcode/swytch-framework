@@ -12,6 +12,6 @@ readonly class UserSpecific extends AbstractCache
 {
 	public function tokenize(Tokenizer $tokenizer): Tokenizer
 	{
-		return $tokenizer->with(public: false);
+		return $tokenizer->with(public: false, private: true);
 	}
 }

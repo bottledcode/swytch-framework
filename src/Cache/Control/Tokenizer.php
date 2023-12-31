@@ -40,7 +40,12 @@ readonly class Tokenizer
 		/**
 		 * @var bool indicates that any caches of any kind (public or shared) should not store this response.
 		 */
-		public bool $public = true,
+		public bool $public = false,
+
+		/**
+		 * @var bool indicates that a public cache should not cache this
+		 */
+		public bool $private = false,
 
 		/**
 		 * @var bool indicates that the response will not be updated while it's fresh.
@@ -68,6 +73,7 @@ readonly class Tokenizer
 		bool|null $proxyRevalidate = null,
 		bool|null $noStore = null,
 		bool|null $public = null,
+		bool|null $private = null,
 		bool|null $immutable = null,
 		int|null|false $staleWhileRevalidating = false,
 		int|null|false $staleIfError = false,
@@ -80,6 +86,7 @@ readonly class Tokenizer
 			proxyRevalidate: $this->withBool($this->proxyRevalidate, $proxyRevalidate),
 			noStore: $this->withBool($this->noStore, $noStore),
 			public: $this->withBool($this->public, $public),
+			private: $this->withBool($this->private, $private),
 			immutable: $this->withBool($this->immutable, $immutable),
 			staleWhileRevalidating: $this->withInt($this->staleWhileRevalidating, $staleWhileRevalidating),
 			staleIfError: $this->withInt($this->staleIfError, $staleIfError),
@@ -99,7 +106,8 @@ readonly class Tokenizer
 	public function render(): string
 	{
 		$header = [
-			$this->public ? 'public' : 'private',
+			...$this->header($this->private, 'private'),
+			...$this->header($this->public, 'public'),
 			...$this->header($this->maxAge, "max-age=$this->maxAge"),
 			...$this->header($this->sMaxAge, "s-maxage=$this->sMaxAge"),
 			...$this->header($this->noCache, "no-cache"),
