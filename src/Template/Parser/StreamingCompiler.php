@@ -784,7 +784,7 @@ class StreamingCompiler
 		);
 
 		// configure tokenizer
-		$attributes = Attributes::forClass($component::class);
+		$attributes = Attributes::forClass($component->type);
 		foreach($attributes->classAttributes as $attribute) {
 			if($attribute instanceof AbstractCache) {
 				$this->tokenizer = $attribute->tokenize($this->tokenizer);
