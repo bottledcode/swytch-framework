@@ -42,6 +42,6 @@ class Renderer extends HtmlHandler implements ProcessInterface
 		$root = $this->container->make($this->root);
 		$rendered = $this->container->call($root->render(...));
 		$rendered = $this->compiler->compile($rendered);
-		return $response->withBody($this->psr17Factory->createStream($rendered));
+		return $response->withBody($this->psr17Factory->createStream($rendered))->withHeader('Cache-Control', $this->compiler->tokenizer->render());
 	}
 }
