@@ -42,6 +42,14 @@ class Renderer extends HtmlHandler implements ProcessInterface
 		$root = $this->container->make($this->root);
 		$rendered = $this->container->call($root->render(...));
 		$rendered = $this->compiler->compile($rendered);
+
+		if(!empty($this->compiler->etagDescription)) {
+			$response = $response->withHeader('ETag', $etag = "W\\".md5(implode("", $this->compiler->etagDescription)));
+			if(($_SERVER['HTTP_IF_NONE_MATCH'] ?? null) && $etag === $_SERVER['HTTP_IF_NONE_MATCH']) {
+				return $response->withStatus(304)->withHeader('Cache-Control', $this->compiler->tokenizer->render());
+			}
+		}
+
 		return $response->withBody($this->psr17Factory->createStream($rendered))->withHeader('Cache-Control', $this->compiler->tokenizer->render());
 	}
 }

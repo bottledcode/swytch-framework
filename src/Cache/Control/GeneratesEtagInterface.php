@@ -4,5 +4,5 @@ namespace Bottledcode\SwytchFramework\Cache\Control;
 
 interface GeneratesEtagInterface
 {
-	public function getEtagComponents(): array;
+	public function getEtagComponents(array $context): array;
 }

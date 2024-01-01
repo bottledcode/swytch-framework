@@ -3,6 +3,7 @@
 namespace Bottledcode\SwytchFramework\Template\Parser;
 
 use Bottledcode\SwytchFramework\Cache\AbstractCache;
+use Bottledcode\SwytchFramework\Cache\Control\GeneratesEtagInterface;
 use Bottledcode\SwytchFramework\Cache\Control\Tokenizer;
 use Bottledcode\SwytchFramework\Template\Functional\DataProvider;
 use Bottledcode\SwytchFramework\Template\Functional\RewritingTag;
@@ -46,6 +47,8 @@ class StreamingCompiler
 	private int $fragmentStart = 0;
 	private int $fragmentLength = 0;
 	private bool $shallow = false;
+
+	public array $etagDescription = [];
 
 	public function __construct(
 		public FactoryInterface $factory,
@@ -792,6 +795,11 @@ class StreamingCompiler
 		}
 
 		$rendering = $component->renderToString($this->attributes);
+
+		if($component->rawComponent instanceof GeneratesEtagInterface) {
+			$this->etagDescription = array_merge_recursive($this->etagDescription, $component->rawComponent->getEtagComponents($this->attributes));
+		}
+
 		$rendering = $this->blobber->makeBlobs($rendering);
 		// stupid hack to get around the fact that we are lexigraphically parsing the document instead
 		// of creating a tree.

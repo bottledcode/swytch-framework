@@ -110,7 +110,7 @@ class Invoker extends ApiHandler implements ProcessInterface
 		}
 
 		if ($component instanceof GeneratesEtagInterface) {
-			$response = $response->withHeader("ETag", $etag = "W\\" . md5(implode($component->getEtagComponents())));
+			$response = $response->withHeader("ETag", $etag = "W\\" . md5(implode('', $component->getEtagComponents($arguments))));
 			if(($_SERVER['HTTP_IF_NONE_MATCH'] ?? null) && $etag === $_SERVER['HTTP_IF_NONE_MATCH']) {
 				return $response->withStatus(304)->withHeader('Cache-Control', $tokenizer->render());
 			}
