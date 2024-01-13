@@ -97,7 +97,7 @@ class Invoker extends ApiHandler implements ProcessInterface
 
 		// now determine cache control headers
 		$tokenizer = $this->factory->make(Tokenizer::class);
-		$attributes = Attributes::forClass($component);
+		$attributes = Attributes::forClass($component::class);
 		foreach ($attributes->classAttributes as $attribute) {
 			if ($attribute instanceof AbstractCache) {
 				$tokenizer = $attribute->tokenize($tokenizer);
